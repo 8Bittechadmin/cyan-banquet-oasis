@@ -173,38 +173,39 @@ const Dashboard = () => {
                   <TabsTrigger value="notifications">Alerts</TabsTrigger>
                 </TabsList>
               </div>
+            
+              <CardContent className="pt-4 px-0">
+                <TabsContent value="tasks" className="mt-0 space-y-4">
+                  <div className="space-y-3">
+                    {tasks.map((task) => (
+                      <div key={task.id} className="flex items-start gap-2">
+                        <div className={`w-5 h-5 rounded-full mt-0.5 border flex items-center justify-center ${task.completed ? 'bg-cyan-100 border-cyan-500 text-cyan-500' : 'border-gray-300'}`}>
+                          {task.completed && <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>}
+                        </div>
+                        <span className={`text-sm ${task.completed ? 'line-through text-gray-500' : ''}`}>{task.title}</span>
+                      </div>
+                    ))}
+                  </div>
+                  
+                  <Button variant="outline" size="sm" className="w-full mt-4">
+                    <PlusCircle size={14} className="mr-1" /> Add Task
+                  </Button>
+                </TabsContent>
+                
+                <TabsContent value="notifications" className="mt-0">
+                  <div className="space-y-3">
+                    {notificationItems.map((item) => (
+                      <div key={item.id} className="border-b border-gray-100 pb-3 last:border-0 last:pb-0">
+                        <h4 className="text-sm font-medium">{item.title}</h4>
+                        <p className="text-xs text-muted-foreground">{item.description}</p>
+                        <span className="text-xs text-gray-400 mt-1">{item.time}</span>
+                      </div>
+                    ))}
+                  </div>
+                </TabsContent>
+              </CardContent>
             </Tabs>
           </CardHeader>
-          <CardContent>
-            <TabsContent value="tasks" className="mt-0 space-y-4">
-              <div className="space-y-3">
-                {tasks.map((task) => (
-                  <div key={task.id} className="flex items-start gap-2">
-                    <div className={`w-5 h-5 rounded-full mt-0.5 border flex items-center justify-center ${task.completed ? 'bg-cyan-100 border-cyan-500 text-cyan-500' : 'border-gray-300'}`}>
-                      {task.completed && <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>}
-                    </div>
-                    <span className={`text-sm ${task.completed ? 'line-through text-gray-500' : ''}`}>{task.title}</span>
-                  </div>
-                ))}
-              </div>
-              
-              <Button variant="outline" size="sm" className="w-full mt-4">
-                <PlusCircle size={14} className="mr-1" /> Add Task
-              </Button>
-            </TabsContent>
-            
-            <TabsContent value="notifications" className="mt-0">
-              <div className="space-y-3">
-                {notificationItems.map((item) => (
-                  <div key={item.id} className="border-b border-gray-100 pb-3 last:border-0 last:pb-0">
-                    <h4 className="text-sm font-medium">{item.title}</h4>
-                    <p className="text-xs text-muted-foreground">{item.description}</p>
-                    <span className="text-xs text-gray-400 mt-1">{item.time}</span>
-                  </div>
-                ))}
-              </div>
-            </TabsContent>
-          </CardContent>
         </Card>
       </div>
       
