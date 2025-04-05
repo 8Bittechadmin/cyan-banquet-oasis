@@ -86,6 +86,7 @@ const ClientManagement: React.FC = () => {
     phone: '(555) 123-4567',
     address: '123 Main St, Anytown, ST 12345',
     notes: 'Prefers vegan catering options. Likes white floral arrangements.',
+    status: 'active', // Added the status field that was missing
     events: [
       { id: 'E001', name: 'Wedding Reception', date: '2025-04-15', venue: 'Grand Ballroom', status: 'upcoming' },
       { id: 'E002', name: 'Engagement Party', date: '2024-10-20', venue: 'Garden Pavilion', status: 'completed' }
