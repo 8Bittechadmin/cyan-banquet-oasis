@@ -21,7 +21,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
 import { toast } from "@/components/ui/use-toast";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase, SystemSettings, UserRole, User } from "@/integrations/supabase/client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 
 const generalSettingsSchema = z.object({
@@ -159,7 +159,7 @@ const Settings = () => {
         .single();
         
       if (error) throw error;
-      return data;
+      return data as SystemSettings;
     },
   });
 
@@ -173,7 +173,7 @@ const Settings = () => {
         .single();
         
       if (error) throw error;
-      return data;
+      return data as SystemSettings;
     },
   });
 
@@ -187,7 +187,7 @@ const Settings = () => {
         .single();
         
       if (error) throw error;
-      return data;
+      return data as SystemSettings;
     },
   });
 
@@ -200,7 +200,7 @@ const Settings = () => {
         .select('*');
         
       if (error) throw error;
-      return data || [];
+      return (data || []) as User[];
     },
   });
 
@@ -213,7 +213,7 @@ const Settings = () => {
         .select('*');
         
       if (error) throw error;
-      return data || [];
+      return (data || []) as UserRole[];
     },
   });
 
@@ -361,7 +361,12 @@ const Settings = () => {
     mutationFn: async (data: z.infer<typeof userSchema>) => {
       const { error, data: newUser } = await supabase
         .from('users')
-        .insert([data])
+        .insert([{
+          username: data.username,
+          email: data.email,
+          role: data.role,
+          password: data.password
+        }])
         .select();
       
       if (error) throw error;
@@ -1232,7 +1237,7 @@ const Settings = () => {
                           users.map((user) => (
                             <tr key={user.id} className="border-b last:border-b-0">
                               <td className="p-3">{user.username}</td>
-                              <td className="p-3">{user.email}</td>
+                              <td className="p-3">{user.email || '-'}</td>
                               <td className="p-3">
                                 <span className={`px-2 py-1 rounded-full text-xs ${
                                   user.role === "Admin" 
