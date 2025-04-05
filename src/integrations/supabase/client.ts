@@ -42,3 +42,22 @@ export type User = {
   password: string | null;
   created_at: string;
 }
+
+// Type for form submissions to ensure type safety
+export type UserRoleInsert = {
+  name: string;
+  accessible_pages?: string[] | null;
+  permissions?: {
+    full_access?: boolean;
+    can_view?: boolean;
+    can_edit?: boolean;
+    can_delete?: boolean;
+  } | null;
+}
+
+export type UserInsert = {
+  username: string;
+  email: string;
+  role: string;
+  password: string;
+}

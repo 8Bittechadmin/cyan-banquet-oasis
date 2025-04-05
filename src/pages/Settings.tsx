@@ -20,7 +20,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
 import { toast } from "@/components/ui/use-toast";
-import { supabase, SystemSettings, UserRole, User } from "@/integrations/supabase/client";
+import { supabase, SystemSettings, UserRole, User, UserRoleInsert, UserInsert } from "@/integrations/supabase/client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 
 const generalSettingsSchema = z.object({
@@ -292,7 +292,7 @@ const Settings = () => {
         throw new Error("Role name is required");
       }
       
-      const roleData = {
+      const roleData: UserRoleInsert = {
         name: data.name,
         accessible_pages: data.accessible_pages || [],
         permissions: data.permissions || {}
@@ -300,7 +300,7 @@ const Settings = () => {
 
       const { error, data: newRole } = await supabase
         .from('user_roles')
-        .insert([roleData])
+        .insert(roleData)
         .select();
       
       if (error) throw error;
@@ -354,7 +354,7 @@ const Settings = () => {
 
   const addUser = useMutation({
     mutationFn: async (data: z.infer<typeof userSchema>) => {
-      const userData = {
+      const userData: UserInsert = {
         username: data.username,
         email: data.email,
         role: data.role,
@@ -363,7 +363,7 @@ const Settings = () => {
 
       const { error, data: newUser } = await supabase
         .from('users')
-        .insert([userData])
+        .insert(userData)
         .select();
       
       if (error) throw error;
@@ -1049,242 +1049,3 @@ const Settings = () => {
                         </tr>
                       </thead>
                       <tbody>
-                        {roles && roles.length > 0 ? (
-                          roles.map((role) => (
-                            <tr key={role.id} className="border-b last:border-b-0">
-                              <td className="p-3 font-medium">{role.name}</td>
-                              <td className="p-3">
-                                <div className="flex flex-wrap gap-1">
-                                  {role.accessible_pages && role.accessible_pages.slice(0, 3).map((page) => (
-                                    <Badge key={page} variant="outline">
-                                      {page.replace("-", " ")}
-                                    </Badge>
-                                  ))}
-                                  {role.accessible_pages && role.accessible_pages.length > 3 && (
-                                    <Badge variant="outline">
-                                      +{role.accessible_pages.length - 3} more
-                                    </Badge>
-                                  )}
-                                </div>
-                              </td>
-                              <td className="p-3 text-right">
-                                <DropdownMenu>
-                                  <DropdownMenuTrigger asChild>
-                                    <Button variant="ghost" size="sm">
-                                      <MoreHorizontal className="h-4 w-4" />
-                                    </Button>
-                                  </DropdownMenuTrigger>
-                                  <DropdownMenuContent align="end">
-                                    <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                                    <DropdownMenuItem>
-                                      <PencilIcon className="h-4 w-4 mr-2" /> Edit
-                                    </DropdownMenuItem>
-                                    <DropdownMenuSeparator />
-                                    <DropdownMenuItem
-                                      className="text-red-600"
-                                      onClick={() => confirmDeleteRole(role.id)}
-                                    >
-                                      <Trash className="h-4 w-4 mr-2" /> Delete
-                                    </DropdownMenuItem>
-                                  </DropdownMenuContent>
-                                </DropdownMenu>
-                              </td>
-                            </tr>
-                          ))
-                        ) : (
-                          <tr>
-                            <td colSpan={3} className="p-4 text-center text-muted-foreground">
-                              No roles found. Create your first role by clicking the "Add Role" button.
-                            </td>
-                          </tr>
-                        )}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-            
-            <Card className="max-w-3xl">
-              <CardHeader className="flex flex-row items-center justify-between">
-                <div>
-                  <CardTitle>System Users</CardTitle>
-                  <CardDescription>
-                    Manage user accounts and assign roles
-                  </CardDescription>
-                </div>
-                <Dialog open={isAddUserModalOpen} onOpenChange={setIsAddUserModalOpen}>
-                  <DialogTrigger asChild>
-                    <Button>
-                      <UserPlus className="mr-2 h-4 w-4" /> Add User
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent className="max-w-md">
-                    <DialogHeader>
-                      <DialogTitle>Add New User</DialogTitle>
-                      <DialogDescription>
-                        Create a new user account for the system
-                      </DialogDescription>
-                    </DialogHeader>
-                    <Form {...addUserForm}>
-                      <form onSubmit={addUserForm.handleSubmit(onAddUserSubmit)} className="space-y-4">
-                        <FormField
-                          control={addUserForm.control}
-                          name="username"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Username</FormLabel>
-                              <FormControl>
-                                <Input {...field} />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                        
-                        <FormField
-                          control={addUserForm.control}
-                          name="email"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Email Address</FormLabel>
-                              <FormControl>
-                                <Input type="email" {...field} />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                        
-                        <FormField
-                          control={addUserForm.control}
-                          name="role"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Role</FormLabel>
-                              <FormControl>
-                                <select
-                                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                                  {...field}
-                                >
-                                  <option value="">Select a role</option>
-                                  {roles && roles.map((role) => (
-                                    <option key={role.id} value={role.name}>
-                                      {role.name}
-                                    </option>
-                                  ))}
-                                </select>
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                        
-                        <FormField
-                          control={addUserForm.control}
-                          name="password"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Password</FormLabel>
-                              <FormControl>
-                                <Input type="password" {...field} />
-                              </FormControl>
-                              <FormDescription>
-                                Must be at least 6 characters
-                              </FormDescription>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                        
-                        <DialogFooter>
-                          <Button type="submit" disabled={addUser.isPending}>
-                            {addUser.isPending ? "Adding..." : "Add User"}
-                          </Button>
-                        </DialogFooter>
-                      </form>
-                    </Form>
-                  </DialogContent>
-                </Dialog>
-              </CardHeader>
-              <CardContent>
-                {loadingUsers ? (
-                  <div className="text-center py-4">Loading users...</div>
-                ) : (
-                  <div className="border rounded-md">
-                    <table className="w-full">
-                      <thead>
-                        <tr className="border-b">
-                          <th className="text-left p-3">Username</th>
-                          <th className="text-left p-3">Email</th>
-                          <th className="text-left p-3">Role</th>
-                          <th className="text-right p-3">Actions</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {users && users.length > 0 ? (
-                          users.map((user) => (
-                            <tr key={user.id} className="border-b last:border-b-0">
-                              <td className="p-3">{user.username}</td>
-                              <td className="p-3">{user.email || '-'}</td>
-                              <td className="p-3">
-                                <span className={`px-2 py-1 rounded-full text-xs ${
-                                  user.role === "Admin" 
-                                    ? "bg-blue-100 text-blue-800" 
-                                    : user.role === "Manager"
-                                    ? "bg-green-100 text-green-800"
-                                    : "bg-gray-100 text-gray-800"
-                                }`}>
-                                  {user.role}
-                                </span>
-                              </td>
-                              <td className="p-3 text-right space-x-2">
-                                <Button variant="outline" size="sm">Edit</Button>
-                                <Button variant="outline" size="sm" className="text-red-500">Delete</Button>
-                              </td>
-                            </tr>
-                          ))
-                        ) : (
-                          <tr>
-                            <td colSpan={4} className="p-4 text-center text-muted-foreground">
-                              No users found. Create your first user by clicking the "Add User" button.
-                            </td>
-                          </tr>
-                        )}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </div>
-        </TabsContent>
-      </Tabs>
-      
-      <AlertDialog 
-        open={isDeleteRoleModalOpen}
-        onOpenChange={setIsDeleteRoleModalOpen}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Confirm Deletion</AlertDialogTitle>
-            <AlertDialogDescription>
-              Are you sure you want to delete this role? This action cannot be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction 
-              onClick={handleDeleteRole} 
-              className="bg-red-600 hover:bg-red-700"
-            >
-              {deleteRole.isPending ? "Deleting..." : "Delete"}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-    </AppLayout>
-  );
-};
-
-export default Settings;
