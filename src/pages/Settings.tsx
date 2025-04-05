@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -81,7 +80,6 @@ const Settings = () => {
   const [currentRoleId, setCurrentRoleId] = useState<string | null>(null);
   const queryClient = useQueryClient();
   
-  // General Settings Form
   const generalForm = useForm<z.infer<typeof generalSettingsSchema>>({
     resolver: zodResolver(generalSettingsSchema),
     defaultValues: {
@@ -95,7 +93,6 @@ const Settings = () => {
     },
   });
 
-  // Email Settings Form
   const emailForm = useForm<z.infer<typeof emailSettingsSchema>>({
     resolver: zodResolver(emailSettingsSchema),
     defaultValues: {
@@ -109,7 +106,6 @@ const Settings = () => {
     },
   });
 
-  // Billing Settings Form
   const billingForm = useForm<z.infer<typeof billingSettingsSchema>>({
     resolver: zodResolver(billingSettingsSchema),
     defaultValues: {
@@ -122,7 +118,6 @@ const Settings = () => {
     },
   });
 
-  // Add Role Form
   const addRoleForm = useForm<z.infer<typeof userRoleSchema>>({
     resolver: zodResolver(userRoleSchema),
     defaultValues: {
@@ -137,7 +132,6 @@ const Settings = () => {
     },
   });
 
-  // Add User Form
   const addUserForm = useForm<z.infer<typeof userSchema>>({
     resolver: zodResolver(userSchema),
     defaultValues: {
@@ -148,7 +142,6 @@ const Settings = () => {
     },
   });
 
-  // Fetch system settings
   const { data: generalSettings, isLoading: loadingGeneral } = useQuery({
     queryKey: ['settings', 'general'],
     queryFn: async () => {
@@ -191,7 +184,6 @@ const Settings = () => {
     },
   });
 
-  // Fetch users
   const { data: users, isLoading: loadingUsers } = useQuery({
     queryKey: ['users'],
     queryFn: async () => {
@@ -204,7 +196,6 @@ const Settings = () => {
     },
   });
 
-  // Fetch roles
   const { data: roles, isLoading: loadingRoles } = useQuery({
     queryKey: ['roles'],
     queryFn: async () => {
@@ -217,7 +208,6 @@ const Settings = () => {
     },
   });
 
-  // Update general settings mutation
   const updateGeneralSettings = useMutation({
     mutationFn: async (data: z.infer<typeof generalSettingsSchema>) => {
       const { error } = await supabase
@@ -244,7 +234,6 @@ const Settings = () => {
     },
   });
 
-  // Update email settings mutation
   const updateEmailSettings = useMutation({
     mutationFn: async (data: z.infer<typeof emailSettingsSchema>) => {
       const { error } = await supabase
@@ -271,7 +260,6 @@ const Settings = () => {
     },
   });
 
-  // Update billing settings mutation
   const updateBillingSettings = useMutation({
     mutationFn: async (data: z.infer<typeof billingSettingsSchema>) => {
       const { error } = await supabase
@@ -298,12 +286,21 @@ const Settings = () => {
     },
   });
 
-  // Add role mutation
   const addRole = useMutation({
     mutationFn: async (data: z.infer<typeof userRoleSchema>) => {
+      if (!data.name) {
+        throw new Error("Role name is required");
+      }
+      
+      const roleData = {
+        name: data.name,
+        accessible_pages: data.accessible_pages || [],
+        permissions: data.permissions || {}
+      };
+
       const { error, data: newRole } = await supabase
         .from('user_roles')
-        .insert([data])
+        .insert([roleData])
         .select();
       
       if (error) throw error;
@@ -327,7 +324,6 @@ const Settings = () => {
     },
   });
 
-  // Delete role mutation
   const deleteRole = useMutation({
     mutationFn: async (id: string) => {
       const { error } = await supabase
@@ -356,17 +352,18 @@ const Settings = () => {
     },
   });
 
-  // Add user mutation
   const addUser = useMutation({
     mutationFn: async (data: z.infer<typeof userSchema>) => {
+      const userData = {
+        username: data.username,
+        email: data.email,
+        role: data.role,
+        password: data.password
+      };
+
       const { error, data: newUser } = await supabase
         .from('users')
-        .insert([{
-          username: data.username,
-          email: data.email,
-          role: data.role,
-          password: data.password
-        }])
+        .insert([userData])
         .select();
       
       if (error) throw error;
@@ -390,7 +387,6 @@ const Settings = () => {
     },
   });
 
-  // Update forms when data is loaded
   useEffect(() => {
     if (generalSettings?.settings) {
       generalForm.reset(generalSettings.settings);
@@ -440,7 +436,6 @@ const Settings = () => {
     setIsDeleteRoleModalOpen(true);
   };
 
-  // Available pages for permissions
   const availablePages = [
     'dashboard', 'bookings', 'inventory', 'venues', 'event-planning', 
     'catering', 'staff', 'billing', 'clients', 'reports', 'settings'
@@ -461,7 +456,6 @@ const Settings = () => {
           <TabsTrigger value="users">Users & Permissions</TabsTrigger>
         </TabsList>
         
-        {/* General Settings Tab */}
         <TabsContent value="general">
           <Card className="max-w-3xl">
             <CardHeader>
@@ -642,7 +636,6 @@ const Settings = () => {
           </Card>
         </TabsContent>
         
-        {/* Email Settings Tab */}
         <TabsContent value="email">
           <Card className="max-w-3xl">
             <CardHeader>
@@ -781,7 +774,6 @@ const Settings = () => {
           </Card>
         </TabsContent>
         
-        {/* Billing Settings Tab */}
         <TabsContent value="billing">
           <Card className="max-w-3xl">
             <CardHeader>
@@ -878,10 +870,8 @@ const Settings = () => {
           </Card>
         </TabsContent>
         
-        {/* User Management Tab */}
         <TabsContent value="users">
           <div className="space-y-6">
-            {/* User Roles */}
             <Card className="max-w-3xl">
               <CardHeader className="flex flex-row items-center justify-between">
                 <div>
@@ -1115,7 +1105,6 @@ const Settings = () => {
               </CardContent>
             </Card>
             
-            {/* User Management */}
             <Card className="max-w-3xl">
               <CardHeader className="flex flex-row items-center justify-between">
                 <div>
@@ -1272,7 +1261,6 @@ const Settings = () => {
         </TabsContent>
       </Tabs>
       
-      {/* Delete Role Confirmation Dialog */}
       <AlertDialog 
         open={isDeleteRoleModalOpen}
         onOpenChange={setIsDeleteRoleModalOpen}
