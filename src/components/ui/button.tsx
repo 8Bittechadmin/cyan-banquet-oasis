@@ -44,9 +44,12 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
     const Comp = asChild ? Slot : "button"
     
     const handleClick = (event: React.MouseEvent<HTMLButtonElement>) => {
-      // Add ripple effect or loading indication if needed
-      if (onClick) {
-        onClick(event);
+      // Provide feedback when button is clicked
+      if (!props.disabled) {
+        // Add ripple effect or loading indication if needed
+        if (onClick) {
+          onClick(event);
+        }
       }
     }
     
