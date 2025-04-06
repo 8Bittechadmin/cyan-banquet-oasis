@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import Logo from './Logo';
 import { 
@@ -12,12 +12,15 @@ import {
   Database, 
   Home, 
   LineChart, 
+  LogOut,
   PackageOpen, 
   Settings, 
   Users, 
   Utensils, 
   Warehouse,
 } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from '@/hooks/use-toast';
 
 interface SidebarProps {
   className?: string;
@@ -34,6 +37,7 @@ interface SidebarLinkProps {
 const Sidebar: React.FC<SidebarProps> = ({ className }) => {
   const [isCollapsed, setIsCollapsed] = useState(false);
   const location = useLocation();
+  const navigate = useNavigate();
   
   const SidebarLink: React.FC<SidebarLinkProps> = ({ to, icon, label, isCollapsed, isActive }) => (
     <Link 
@@ -49,6 +53,23 @@ const Sidebar: React.FC<SidebarProps> = ({ className }) => {
       {!isCollapsed && <span className="font-medium">{label}</span>}
     </Link>
   );
+
+  const handleLogout = async () => {
+    try {
+      await supabase.auth.signOut();
+      toast({
+        title: "Logged out successfully",
+        description: "You have been logged out of your account.",
+      });
+      navigate('/login');
+    } catch (error) {
+      toast({
+        title: "Logout failed",
+        description: "There was a problem logging out. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
 
   return (
     <div 
@@ -160,6 +181,20 @@ const Sidebar: React.FC<SidebarProps> = ({ className }) => {
           isCollapsed={isCollapsed} 
           isActive={location.pathname === '/settings'}
         />
+        
+        {/* Logout Button */}
+        <button
+          onClick={handleLogout}
+          className={cn(
+            "flex items-center py-3 px-4 rounded-md transition-colors duration-200 w-full mt-2",
+            "text-gray-600 hover:bg-red-50 hover:text-red-700"
+          )}
+        >
+          <div className="mr-3 text-lg">
+            <LogOut />
+          </div>
+          {!isCollapsed && <span className="font-medium">Logout</span>}
+        </button>
       </div>
     </div>
   );
