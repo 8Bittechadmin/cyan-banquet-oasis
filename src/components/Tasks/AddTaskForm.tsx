@@ -1,6 +1,5 @@
 
 import React from 'react';
-import { z } from 'zod';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { format } from 'date-fns';
@@ -13,17 +12,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Calendar } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
 import { FormField, FormControl, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-
-const formSchema = z.object({
-  title: z.string().min(1, 'Title is required'),
-  description: z.string().optional(),
-  booking_id: z.string().optional(),
-  due_date: z.date().optional(),
-  assigned_to: z.string().optional(),
-  status: z.string().default('pending'),
-});
-
-export type TaskFormValues = z.infer<typeof formSchema>;
+import { TaskFormSchema, TaskFormValues, STATUS_OPTIONS } from './TaskFormSchema';
 
 interface AddTaskFormProps {
   onSubmit: (values: TaskFormValues) => void;
@@ -33,7 +22,7 @@ interface AddTaskFormProps {
 
 export function AddTaskForm({ onSubmit, isSubmitting, bookingId }: AddTaskFormProps) {
   const form = useForm<TaskFormValues>({
-    resolver: zodResolver(formSchema),
+    resolver: zodResolver(TaskFormSchema),
     defaultValues: {
       title: '',
       description: '',
@@ -41,12 +30,6 @@ export function AddTaskForm({ onSubmit, isSubmitting, bookingId }: AddTaskFormPr
       status: 'pending',
     },
   });
-
-  const statusOptions = [
-    { value: 'pending', label: 'Pending' },
-    { value: 'in-progress', label: 'In Progress' },
-    { value: 'completed', label: 'Completed' },
-  ];
 
   return (
     <Form {...form}>
@@ -109,7 +92,7 @@ export function AddTaskForm({ onSubmit, isSubmitting, bookingId }: AddTaskFormPr
             form={form}
             name="status"
             label="Status"
-            options={statusOptions}
+            options={STATUS_OPTIONS}
           />
         </div>
 

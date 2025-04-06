@@ -11,7 +11,7 @@ import LoginAdmin from "./pages/LoginAdmin";
 import LoginStaff from "./pages/LoginStaff";
 import Dashboard from "./pages/Dashboard";
 import Bookings from "./pages/Bookings";
-import BookingForm from "./pages/BookingForm"; // Add new import
+import BookingForm from "./pages/BookingForm";
 import Inventory from "./pages/Inventory";
 import Venues from "./pages/Venues";
 import EventPlanning from "./pages/EventPlanning";

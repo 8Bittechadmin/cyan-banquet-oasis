@@ -75,12 +75,8 @@ export const AddNewBookingButton = () => {
 
 export const AddTaskButton = () => {
   const handleAddTask = () => {
-    // This would typically open a modal
-    toast({
-      title: "Add New Task",
-      description: "Opening task creation form",
-    });
-    // We'll implement the actual modal elsewhere
+    // This would open the task creation modal
+    document.getElementById('open-task-modal-btn')?.click();
   };
   
   return (

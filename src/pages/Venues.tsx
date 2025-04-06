@@ -1,5 +1,4 @@
-
-import React from 'react';
+import React, { useState } from 'react';
 import AppLayout from '@/components/AppLayout';
 import PageHeader from '@/components/PageHeader';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -7,9 +6,12 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Calendar, Plus, Users, Square, Clock } from 'lucide-react';
+import VenueModal from '@/components/Venues/VenueModal';
 
 const Venues: React.FC = () => {
-  // Mock venue data
+  const [isAddVenueModalOpen, setIsAddVenueModalOpen] = useState(false);
+  const [isAvailabilityModalOpen, setIsAvailabilityModalOpen] = useState(false);
+  
   const venues = [
     {
       id: 'V001',
@@ -94,7 +96,7 @@ const Venues: React.FC = () => {
         action={{
           label: "Add Venue",
           icon: <Plus size={16} />,
-          onClick: () => console.log("Add new venue")
+          onClick: () => setIsAddVenueModalOpen(true)
         }}
       />
       
@@ -105,7 +107,11 @@ const Venues: React.FC = () => {
             <TabsTrigger value="calendar">Availability Calendar</TabsTrigger>
           </TabsList>
           
-          <Button variant="outline" size="sm">
+          <Button 
+            variant="outline" 
+            size="sm"
+            onClick={() => setIsAvailabilityModalOpen(true)}
+          >
             <Calendar className="h-4 w-4 mr-2" />
             Check Availability
           </Button>
@@ -166,6 +172,11 @@ const Venues: React.FC = () => {
           </div>
         </TabsContent>
       </Tabs>
+      
+      <VenueModal 
+        open={isAddVenueModalOpen}
+        onOpenChange={setIsAddVenueModalOpen}
+      />
     </AppLayout>
   );
 };

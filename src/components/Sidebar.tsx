@@ -61,7 +61,7 @@ const Sidebar: React.FC<SidebarProps> = ({ className }) => {
         title: "Logged out successfully",
         description: "You have been logged out of your account.",
       });
-      navigate('/login');
+      navigate('/'); // Changed from '/login' to '/' to go to the index page
     } catch (error) {
       toast({
         title: "Logout failed",

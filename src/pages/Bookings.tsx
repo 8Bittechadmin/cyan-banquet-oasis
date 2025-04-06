@@ -1,5 +1,5 @@
-
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import AppLayout from '@/components/AppLayout';
 import PageHeader from '@/components/PageHeader';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -12,6 +12,7 @@ import { Badge } from '@/components/ui/badge';
 
 const Bookings: React.FC = () => {
   const [viewType, setViewType] = useState<'calendar' | 'list'>('calendar');
+  const navigate = useNavigate();
   
   // Mock booking data
   const bookings = [
@@ -96,7 +97,7 @@ const Bookings: React.FC = () => {
         action={{
           label: "New Booking",
           icon: <Plus size={16} />,
-          onClick: () => console.log("Create new booking")
+          onClick: () => navigate('/bookings/new')
         }}
       />
       

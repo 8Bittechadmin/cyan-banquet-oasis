@@ -1,5 +1,4 @@
-
-import React from 'react';
+import React, { useState } from 'react';
 import AppLayout from '@/components/AppLayout';
 import PageHeader from '@/components/PageHeader';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -9,8 +8,11 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Calendar, Search, Plus, Filter, Check, Clock, User } from 'lucide-react';
+import StaffModal from '@/components/Staff/StaffModal';
 
 const Staff: React.FC = () => {
+  const [isAddStaffModalOpen, setIsAddStaffModalOpen] = useState(false);
+  
   // Mock staff data
   const staffMembers = [
     {
@@ -124,7 +126,7 @@ const Staff: React.FC = () => {
         action={{
           label: "Add Staff",
           icon: <Plus size={16} />,
-          onClick: () => console.log("Add new staff member")
+          onClick: () => setIsAddStaffModalOpen(true)
         }}
       />
       
@@ -284,6 +286,11 @@ const Staff: React.FC = () => {
           </div>
         </TabsContent>
       </Tabs>
+      
+      <StaffModal 
+        open={isAddStaffModalOpen}
+        onOpenChange={setIsAddStaffModalOpen}
+      />
     </AppLayout>
   );
 };
