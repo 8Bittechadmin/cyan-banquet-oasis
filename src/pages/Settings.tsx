@@ -19,7 +19,7 @@ import { Form, FormField, FormItem, FormLabel, FormControl, FormDescription, For
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
-import { toast } from "@/components/ui/use-toast";
+import { toast } from "@/hooks/use-toast";
 import { supabase, SystemSettings, UserRole, User, UserRoleInsert, UserInsert } from "@/integrations/supabase/client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 
@@ -1049,3 +1049,223 @@ const Settings = () => {
                         </tr>
                       </thead>
                       <tbody>
+                        {roles?.map((role) => (
+                          <tr key={role.id} className="border-b">
+                            <td className="p-3">{role.name}</td>
+                            <td className="p-3">
+                              <div className="flex flex-wrap gap-1">
+                                {role.permissions?.full_access && (
+                                  <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+                                    Full Access
+                                  </Badge>
+                                )}
+                                {role.accessible_pages?.slice(0, 2).map((page) => (
+                                  <Badge key={page} variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
+                                    {page.replace("-", " ")}
+                                  </Badge>
+                                ))}
+                                {(role.accessible_pages?.length || 0) > 2 && (
+                                  <Badge variant="outline" className="bg-gray-50 text-gray-700 border-gray-200">
+                                    +{(role.accessible_pages?.length || 0) - 2} more
+                                  </Badge>
+                                )}
+                              </div>
+                            </td>
+                            <td className="p-3 text-right">
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button variant="ghost" size="sm">
+                                    <MoreHorizontal className="h-4 w-4" />
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                  <DropdownMenuItem 
+                                    onClick={() => confirmDeleteRole(role.id)}
+                                    className="text-red-600 focus:text-red-600"
+                                  >
+                                    <Trash className="mr-2 h-4 w-4" /> Delete
+                                  </DropdownMenuItem>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            <Card className="max-w-3xl">
+              <CardHeader className="flex flex-row items-center justify-between">
+                <div>
+                  <CardTitle>Users</CardTitle>
+                  <CardDescription>
+                    Manage user accounts and their access levels
+                  </CardDescription>
+                </div>
+                <Dialog open={isAddUserModalOpen} onOpenChange={setIsAddUserModalOpen}>
+                  <DialogTrigger asChild>
+                    <Button>
+                      <UserPlus className="mr-2 h-4 w-4" /> Add User
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="max-w-md">
+                    <DialogHeader>
+                      <DialogTitle>Add New User</DialogTitle>
+                      <DialogDescription>
+                        Create a new user account with role assignment
+                      </DialogDescription>
+                    </DialogHeader>
+                    <Form {...addUserForm}>
+                      <form onSubmit={addUserForm.handleSubmit(onAddUserSubmit)} className="space-y-4">
+                        <FormField
+                          control={addUserForm.control}
+                          name="username"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Username</FormLabel>
+                              <FormControl>
+                                <Input {...field} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        
+                        <FormField
+                          control={addUserForm.control}
+                          name="email"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Email Address</FormLabel>
+                              <FormControl>
+                                <Input {...field} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        
+                        <FormField
+                          control={addUserForm.control}
+                          name="role"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Role</FormLabel>
+                              <FormControl>
+                                <select className="w-full rounded-md border border-input p-2" {...field}>
+                                  <option value="">Select a role</option>
+                                  {roles?.map(role => (
+                                    <option key={role.id} value={role.name}>
+                                      {role.name}
+                                    </option>
+                                  ))}
+                                </select>
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        
+                        <FormField
+                          control={addUserForm.control}
+                          name="password"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Password</FormLabel>
+                              <FormControl>
+                                <Input type="password" {...field} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        
+                        <DialogFooter>
+                          <Button type="submit" disabled={addUser.isPending}>
+                            {addUser.isPending ? "Adding..." : "Add User"}
+                          </Button>
+                        </DialogFooter>
+                      </form>
+                    </Form>
+                  </DialogContent>
+                </Dialog>
+              </CardHeader>
+              <CardContent>
+                {loadingUsers ? (
+                  <div className="text-center py-4">Loading users...</div>
+                ) : (
+                  <div className="border rounded-md">
+                    <table className="w-full">
+                      <thead>
+                        <tr className="border-b">
+                          <th className="text-left p-3">Username</th>
+                          <th className="text-left p-3">Email</th>
+                          <th className="text-left p-3">Role</th>
+                          <th className="text-right p-3">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {users?.map((user) => (
+                          <tr key={user.id} className="border-b">
+                            <td className="p-3">{user.username}</td>
+                            <td className="p-3">{user.email}</td>
+                            <td className="p-3">
+                              <Badge variant="outline" className="bg-purple-50 text-purple-700 border-purple-200">
+                                {user.role}
+                              </Badge>
+                            </td>
+                            <td className="p-3 text-right">
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button variant="ghost" size="sm">
+                                    <MoreHorizontal className="h-4 w-4" />
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                  <DropdownMenuItem>
+                                    <PencilIcon className="mr-2 h-4 w-4" /> Edit
+                                  </DropdownMenuItem>
+                                  <DropdownMenuSeparator />
+                                  <DropdownMenuItem className="text-red-600 focus:text-red-600">
+                                    <Trash className="mr-2 h-4 w-4" /> Delete
+                                  </DropdownMenuItem>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
+      </Tabs>
+      
+      <AlertDialog open={isDeleteRoleModalOpen} onOpenChange={setIsDeleteRoleModalOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently delete the
+              role and remove it from all associated users.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteRole} className="bg-destructive text-destructive-foreground">
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </AppLayout>
+  );
+};
+
+export default Settings;
