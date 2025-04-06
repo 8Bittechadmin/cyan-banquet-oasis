@@ -1,11 +1,9 @@
-
-import React from 'react';
+import React, { useState } from 'react';
 import AppLayout from '@/components/AppLayout';
 import PageHeader from '@/components/PageHeader';
 import StatCard from '@/components/StatCard';
 import EventCard from '@/components/EventCard';
 import ProgressBar from '@/components/ProgressBar';
-import { Button } from '@/components/ui/button';
 import { 
   Calendar,
   CalendarPlus,
@@ -20,6 +18,9 @@ import {
 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Button } from '@/components/ui/button';
+import { ViewCalendarButton, CheckAvailabilityButton, AddTaskButton } from '@/components/Dashboard/ActionButtons';
+import { AddTaskModal } from '@/components/Tasks/AddTaskModal';
 
 // Mock data for the dashboard
 const todaysEvents = [
@@ -110,6 +111,8 @@ const notificationItems = [
 ];
 
 const Dashboard = () => {
+  const [isAddTaskModalOpen, setIsAddTaskModalOpen] = useState(false);
+  
   return (
     <AppLayout>
       <PageHeader 
@@ -118,7 +121,7 @@ const Dashboard = () => {
         action={{
           label: "Add New Booking",
           icon: <CalendarPlus size={16} />,
-          onClick: () => console.log("Add new booking clicked")
+          onClick: () => window.location.href = "/bookings/new"
         }}
       />
       
@@ -187,7 +190,12 @@ const Dashboard = () => {
                     ))}
                   </div>
                   
-                  <Button variant="outline" size="sm" className="w-full mt-4">
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="w-full mt-4"
+                    onClick={() => setIsAddTaskModalOpen(true)}
+                  >
                     <PlusCircle size={14} className="mr-1" /> Add Task
                   </Button>
                 </TabsContent>
@@ -222,9 +230,7 @@ const Dashboard = () => {
               ))}
             </div>
             
-            <Button variant="outline" className="mt-4 w-full">
-              View Full Calendar
-            </Button>
+            <ViewCalendarButton />
           </CardContent>
         </Card>
         
@@ -284,12 +290,15 @@ const Dashboard = () => {
               </div>
             </div>
             
-            <Button variant="outline" className="mt-4 w-full">
-              Check Availability
-            </Button>
+            <CheckAvailabilityButton />
           </CardContent>
         </Card>
       </div>
+      
+      <AddTaskModal 
+        open={isAddTaskModalOpen}
+        onOpenChange={setIsAddTaskModalOpen}
+      />
     </AppLayout>
   );
 };

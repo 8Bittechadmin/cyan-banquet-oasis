@@ -43,6 +43,144 @@ export type User = {
   created_at: string;
 }
 
+export type Venue = {
+  id: string;
+  name: string;
+  description: string | null;
+  capacity: number;
+  square_footage: number;
+  hourly_rate: number;
+  availability: string | null;
+  image_url: string | null;
+  features: string[] | null;
+  created_at: string | null;
+  updated_at: string | null;
+}
+
+export type Client = {
+  id: string;
+  name: string;
+  email: string | null;
+  phone: string | null;
+  client_type: string | null;
+  address: string | null;
+  notes: string | null;
+  created_at: string | null;
+  updated_at: string | null;
+}
+
+export type Booking = {
+  id: string;
+  client_id: string | null;
+  venue_id: string | null;
+  start_date: string;
+  end_date: string;
+  guest_count: number;
+  total_amount: number | null;
+  deposit_amount: number | null;
+  deposit_paid: boolean | null;
+  created_at: string | null;
+  updated_at: string | null;
+  event_type: string;
+  event_name: string;
+  status: string;
+  notes: string | null;
+}
+
+export type Task = {
+  id: string;
+  booking_id: string | null;
+  title: string;
+  description: string | null;
+  due_date: string | null;
+  assigned_to: string | null;
+  status: string | null;
+  created_at: string | null;
+  updated_at: string | null;
+}
+
+export type StaffMember = {
+  id: string;
+  name: string;
+  position: string;
+  department: string;
+  contact: string | null;
+  status: string | null;
+  created_at: string | null;
+  updated_at: string | null;
+}
+
+export type MenuItem = {
+  id: string;
+  category_id: string | null;
+  name: string;
+  description: string | null;
+  price: number;
+  is_special: boolean | null;
+  ingredients: string[] | null;
+  image_url: string | null;
+  created_at: string | null;
+  updated_at: string | null;
+}
+
+export type MenuCategory = {
+  id: string;
+  name: string;
+  description: string | null;
+  created_at: string | null;
+  updated_at: string | null;
+}
+
+export type InventoryItem = {
+  id: string;
+  name: string;
+  category: string;
+  quantity: number;
+  min_quantity: number | null;
+  unit: string | null;
+  status: string | null;
+  notes: string | null;
+  created_at: string | null;
+  updated_at: string | null;
+}
+
+export type Invoice = {
+  id: string;
+  booking_id: string | null;
+  invoice_number: string;
+  issue_date: string | null;
+  due_date: string;
+  amount: number;
+  tax_amount: number | null;
+  total_amount: number;
+  status: string | null;
+  notes: string | null;
+  created_at: string | null;
+  updated_at: string | null;
+}
+
+export type Payment = {
+  id: string;
+  invoice_id: string | null;
+  amount: number;
+  payment_method: string;
+  transaction_id: string | null;
+  payment_date: string | null;
+  notes: string | null;
+  created_at: string | null;
+  updated_at: string | null;
+}
+
+export type ClientMessage = {
+  id: string;
+  client_id: string | null;
+  message: string;
+  sender: string;
+  sent_at: string | null;
+  created_at: string | null;
+  updated_at: string | null;
+}
+
 // Type for form submissions to ensure type safety
 export type UserRoleInsert = {
   name: string;

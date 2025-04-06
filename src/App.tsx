@@ -11,6 +11,7 @@ import LoginAdmin from "./pages/LoginAdmin";
 import LoginStaff from "./pages/LoginStaff";
 import Dashboard from "./pages/Dashboard";
 import Bookings from "./pages/Bookings";
+import BookingForm from "./pages/BookingForm"; // Add new import
 import Inventory from "./pages/Inventory";
 import Venues from "./pages/Venues";
 import EventPlanning from "./pages/EventPlanning";
@@ -36,6 +37,7 @@ const App = () => (
           <Route path="/login-staff" element={<LoginStaff />} />
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/bookings" element={<Bookings />} />
+          <Route path="/bookings/new" element={<BookingForm />} />
           <Route path="/inventory" element={<Inventory />} />
           <Route path="/venues" element={<Venues />} />
           <Route path="/event-planning" element={<EventPlanning />} />
