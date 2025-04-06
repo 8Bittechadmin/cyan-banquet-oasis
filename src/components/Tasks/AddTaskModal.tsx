@@ -70,13 +70,16 @@ export function AddTaskModal({ open, onOpenChange, bookingId }: AddTaskModalProp
 
   const createTask = useMutation({
     mutationFn: async (values: FormValues) => {
+      // Convert Date object to ISO string if it exists
+      const due_date = values.due_date ? values.due_date.toISOString() : null;
+      
       const { data, error } = await supabase
         .from('tasks')
         .insert({
           title: values.title,
           description: values.description || null,
           booking_id: values.booking_id || null,
-          due_date: values.due_date || null,
+          due_date: due_date,
           assigned_to: values.assigned_to || null,
           status: values.status,
         })
