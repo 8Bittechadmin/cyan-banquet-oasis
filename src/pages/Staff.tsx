@@ -1,4 +1,6 @@
-import React, { useState } from 'react';
+
+import React, { useState, useEffect } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import AppLayout from '@/components/AppLayout';
 import PageHeader from '@/components/PageHeader';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -9,98 +11,83 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Calendar, Search, Plus, Filter, Check, Clock, User } from 'lucide-react';
 import StaffModal from '@/components/Staff/StaffModal';
+import { supabase, StaffMember } from '@/integrations/supabase/client';
+import ExportButton from '@/components/Common/ExportButton';
+import { toast } from '@/hooks/use-toast';
 
 const Staff: React.FC = () => {
   const [isAddStaffModalOpen, setIsAddStaffModalOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
   
-  // Mock staff data
-  const staffMembers = [
-    {
-      id: 'S001',
-      name: 'James Wilson',
-      position: 'Event Manager',
-      department: 'Operations',
-      contact: 'james.w@example.com',
-      status: 'available'
-    },
-    {
-      id: 'S002',
-      name: 'Sarah Miller',
-      position: 'Catering Manager',
-      department: 'Catering',
-      contact: 'sarah.m@example.com',
-      status: 'on-duty'
-    },
-    {
-      id: 'S003',
-      name: 'Michael Rodriguez',
-      position: 'Head Chef',
-      department: 'Culinary',
-      contact: 'michael.r@example.com',
-      status: 'on-duty'
-    },
-    {
-      id: 'S004',
-      name: 'Emily Johnson',
-      position: 'Server',
-      department: 'Service',
-      contact: 'emily.j@example.com',
-      status: 'unavailable'
-    },
-    {
-      id: 'S005',
-      name: 'Thomas Lee',
-      position: 'Bartender',
-      department: 'Service',
-      contact: 'thomas.l@example.com',
-      status: 'available'
-    },
-    {
-      id: 'S006',
-      name: 'Jessica Smith',
-      position: 'Server',
-      department: 'Service',
-      contact: 'jessica.s@example.com',
-      status: 'unavailable'
-    },
-    {
-      id: 'S007',
-      name: 'Robert Brown',
-      position: 'AV Technician',
-      department: 'Technical',
-      contact: 'robert.b@example.com',
-      status: 'available'
+  // Fetch staff statistics
+  const { data: staffStats, isLoading: isLoadingStats } = useQuery({
+    queryKey: ['staffStats'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('staff_stats')
+        .select('*')
+        .single();
+      
+      if (error) throw error;
+      return data;
     }
-  ];
+  });
   
-  // Current event staff assignments
-  const staffAssignments = [
-    {
-      eventName: 'Johnson-Smith Wedding',
-      date: '2025-04-15',
-      time: '16:00 - 23:00',
-      venue: 'Grand Ballroom',
-      staff: [
-        { id: 'S001', name: 'James Wilson', position: 'Event Manager', status: 'confirmed' },
-        { id: 'S002', name: 'Sarah Miller', position: 'Catering Manager', status: 'confirmed' },
-        { id: 'S003', name: 'Michael Rodriguez', position: 'Head Chef', status: 'confirmed' },
-        { id: 'S005', name: 'Thomas Lee', position: 'Bartender', status: 'confirmed' },
-        { id: 'S004', name: 'Emily Johnson', position: 'Server', status: 'tentative' },
-        { id: 'S006', name: 'Jessica Smith', position: 'Server', status: 'tentative' },
-      ]
-    },
-    {
-      eventName: 'TechCorp Conference',
-      date: '2025-04-10',
-      time: '08:00 - 17:00',
-      venue: 'Conference Hall A',
-      staff: [
-        { id: 'S001', name: 'James Wilson', position: 'Event Manager', status: 'confirmed' },
-        { id: 'S007', name: 'Robert Brown', position: 'AV Technician', status: 'confirmed' },
-        { id: 'S002', name: 'Sarah Miller', position: 'Catering Manager', status: 'pending' },
-      ]
+  // Fetch staff members
+  const { data: staffMembers, isLoading, refetch } = useQuery({
+    queryKey: ['staffMembers'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('staff')
+        .select('*')
+        .order('name');
+      
+      if (error) throw error;
+      return data;
     }
-  ];
+  });
+
+  // Fetch staff assignments
+  const { data: staffAssignments } = useQuery({
+    queryKey: ['staffAssignments'],
+    queryFn: async () => {
+      // In a real application, we would fetch from the staff_assignments table
+      // For now, return the mock data
+      return [
+        {
+          eventName: 'Johnson-Smith Wedding',
+          date: '2025-04-15',
+          time: '16:00 - 23:00',
+          venue: 'Grand Ballroom',
+          staff: [
+            { id: 'S001', name: 'James Wilson', position: 'Event Manager', status: 'confirmed' },
+            { id: 'S002', name: 'Sarah Miller', position: 'Catering Manager', status: 'confirmed' },
+            { id: 'S003', name: 'Michael Rodriguez', position: 'Head Chef', status: 'confirmed' },
+            { id: 'S005', name: 'Thomas Lee', position: 'Bartender', status: 'confirmed' },
+            { id: 'S004', name: 'Emily Johnson', position: 'Server', status: 'tentative' },
+            { id: 'S006', name: 'Jessica Smith', position: 'Server', status: 'tentative' },
+          ]
+        },
+        {
+          eventName: 'TechCorp Conference',
+          date: '2025-04-10',
+          time: '08:00 - 17:00',
+          venue: 'Conference Hall A',
+          staff: [
+            { id: 'S001', name: 'James Wilson', position: 'Event Manager', status: 'confirmed' },
+            { id: 'S007', name: 'Robert Brown', position: 'AV Technician', status: 'confirmed' },
+            { id: 'S002', name: 'Sarah Miller', position: 'Catering Manager', status: 'pending' },
+          ]
+        }
+      ];
+    }
+  });
+  
+  const filteredStaffMembers = staffMembers?.filter(staff => 
+    staff.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    staff.position.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    staff.department.toLowerCase().includes(searchTerm.toLowerCase())
+  ) || [];
   
   const getStatusColor = (status: string) => {
     switch(status) {
@@ -116,6 +103,36 @@ const Staff: React.FC = () => {
   
   const getStatusLabel = (status: string) => {
     return status.split('-').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
+  };
+
+  const handleAddStaff = async (values: any) => {
+    try {
+      // Insert new staff member into the database
+      const { data, error } = await supabase
+        .from('staff')
+        .insert([values])
+        .select();
+      
+      if (error) throw error;
+      
+      toast({
+        title: 'Success',
+        description: `${values.name} has been added to staff.`,
+      });
+      
+      // Refresh the staff list
+      refetch();
+      
+      return data;
+    } catch (error) {
+      console.error('Error adding staff:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to add staff member.',
+        variant: 'destructive',
+      });
+      throw error;
+    }
   };
   
   return (
@@ -136,7 +153,7 @@ const Staff: React.FC = () => {
             <CardTitle className="text-sm font-medium">Total Staff</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">42</div>
+            <div className="text-2xl font-bold">{isLoadingStats ? '...' : staffStats?.total_staff || 0}</div>
             <p className="text-xs text-muted-foreground mt-1">Across 5 departments</p>
           </CardContent>
         </Card>
@@ -145,8 +162,8 @@ const Staff: React.FC = () => {
             <CardTitle className="text-sm font-medium">Available Today</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">28</div>
-            <p className="text-xs text-muted-foreground mt-1">66% of total staff</p>
+            <div className="text-2xl font-bold">{isLoadingStats ? '...' : staffStats?.available_today || 0}</div>
+            <p className="text-xs text-muted-foreground mt-1">{staffStats ? Math.round((staffStats.available_today / staffStats.total_staff) * 100) : 0}% of total staff</p>
           </CardContent>
         </Card>
         <Card>
@@ -154,7 +171,7 @@ const Staff: React.FC = () => {
             <CardTitle className="text-sm font-medium">On Duty</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">14</div>
+            <div className="text-2xl font-bold">{isLoadingStats ? '...' : staffStats?.on_duty || 0}</div>
             <p className="text-xs text-muted-foreground mt-1">Currently working</p>
           </CardContent>
         </Card>
@@ -163,7 +180,7 @@ const Staff: React.FC = () => {
             <CardTitle className="text-sm font-medium">Upcoming Shifts</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">8</div>
+            <div className="text-2xl font-bold">{isLoadingStats ? '...' : staffStats?.upcoming_shifts || 0}</div>
             <p className="text-xs text-muted-foreground mt-1">In next 24 hours</p>
           </CardContent>
         </Card>
@@ -177,18 +194,27 @@ const Staff: React.FC = () => {
         </TabsList>
         
         <TabsContent value="directory" className="space-y-4 m-0">
-          <div className="flex flex-col md:flex-row gap-4 mb-4">
+          <div className="flex flex-col md:flex-row gap-4 mb-4 justify-between">
             <div className="relative flex-grow">
               <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-500" />
               <Input 
                 placeholder="Search staff..." 
                 className="w-full pl-9" 
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
               />
             </div>
-            <Button variant="outline" className="flex gap-2">
-              <Filter className="h-4 w-4" />
-              <span>Filter</span>
-            </Button>
+            <div className="flex gap-2">
+              <Button variant="outline" className="flex gap-2">
+                <Filter className="h-4 w-4" />
+                <span>Filter</span>
+              </Button>
+              <ExportButton 
+                data={filteredStaffMembers} 
+                filename="staff-directory" 
+                label="Export"
+              />
+            </div>
           </div>
           
           <Card>
@@ -197,40 +223,48 @@ const Staff: React.FC = () => {
               <CardDescription>View and manage staff</CardDescription>
             </CardHeader>
             <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>ID</TableHead>
-                    <TableHead>Name</TableHead>
-                    <TableHead className="hidden md:table-cell">Position</TableHead>
-                    <TableHead className="hidden lg:table-cell">Department</TableHead>
-                    <TableHead className="hidden xl:table-cell">Contact</TableHead>
-                    <TableHead>Status</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {staffMembers.map((staff) => (
-                    <TableRow key={staff.id} className="cursor-pointer hover:bg-gray-50">
-                      <TableCell className="font-medium">{staff.id}</TableCell>
-                      <TableCell>{staff.name}</TableCell>
-                      <TableCell className="hidden md:table-cell">{staff.position}</TableCell>
-                      <TableCell className="hidden lg:table-cell">{staff.department}</TableCell>
-                      <TableCell className="hidden xl:table-cell">{staff.contact}</TableCell>
-                      <TableCell>
-                        <Badge className={getStatusColor(staff.status)}>
-                          {getStatusLabel(staff.status)}
-                        </Badge>
-                      </TableCell>
+              {isLoading ? (
+                <div className="flex justify-center py-8">Loading staff directory...</div>
+              ) : filteredStaffMembers.length === 0 ? (
+                <div className="text-center py-8">
+                  {searchTerm ? 'No staff members match your search.' : 'No staff members found.'}
+                </div>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>ID</TableHead>
+                      <TableHead>Name</TableHead>
+                      <TableHead className="hidden md:table-cell">Position</TableHead>
+                      <TableHead className="hidden lg:table-cell">Department</TableHead>
+                      <TableHead className="hidden xl:table-cell">Contact</TableHead>
+                      <TableHead>Status</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredStaffMembers.map((staff) => (
+                      <TableRow key={staff.id} className="cursor-pointer hover:bg-gray-50">
+                        <TableCell className="font-medium">{staff.id.substring(0, 6)}</TableCell>
+                        <TableCell>{staff.name}</TableCell>
+                        <TableCell className="hidden md:table-cell">{staff.position}</TableCell>
+                        <TableCell className="hidden lg:table-cell">{staff.department}</TableCell>
+                        <TableCell className="hidden xl:table-cell">{staff.contact}</TableCell>
+                        <TableCell>
+                          <Badge className={getStatusColor(staff.status || '')}>
+                            {getStatusLabel(staff.status || '')}
+                          </Badge>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
         
         <TabsContent value="assignments" className="space-y-6 m-0">
-          {staffAssignments.map((event, index) => (
+          {staffAssignments?.map((event, index) => (
             <Card key={index}>
               <CardHeader>
                 <div className="flex justify-between flex-wrap gap-2">
@@ -290,6 +324,7 @@ const Staff: React.FC = () => {
       <StaffModal 
         open={isAddStaffModalOpen}
         onOpenChange={setIsAddStaffModalOpen}
+        onSubmit={handleAddStaff}
       />
     </AppLayout>
   );

@@ -14,25 +14,34 @@ import { StaffFormValues } from './StaffFormSchema';
 interface StaffModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  onSubmit?: (values: StaffFormValues) => Promise<any>;
 }
 
-export const StaffModal: React.FC<StaffModalProps> = ({ open, onOpenChange }) => {
+export const StaffModal: React.FC<StaffModalProps> = ({ 
+  open, 
+  onOpenChange,
+  onSubmit 
+}) => {
   const [isSubmitting, setIsSubmitting] = React.useState(false);
 
   const handleSubmit = async (values: StaffFormValues) => {
     setIsSubmitting(true);
     
     try {
-      // Here would be the API call to add the staff member to your database
-      console.log('Staff data submitted:', values);
-      
-      // Simulate an API delay
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      toast({
-        title: 'Staff Added',
-        description: `${values.name} has been added successfully.`,
-      });
+      if (onSubmit) {
+        await onSubmit(values);
+      } else {
+        // Default implementation if no onSubmit is provided
+        console.log('Staff data submitted:', values);
+        
+        // Simulate an API delay
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        
+        toast({
+          title: 'Staff Added',
+          description: `${values.name} has been added successfully.`,
+        });
+      }
       
       onOpenChange(false);
     } catch (error) {

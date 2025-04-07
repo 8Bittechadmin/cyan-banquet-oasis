@@ -137,6 +137,60 @@ export type Database = {
         }
         Relationships: []
       }
+      dashboard_notifications: {
+        Row: {
+          created_at: string
+          description: string
+          id: string
+          is_read: boolean
+          time: string
+          title: string
+        }
+        Insert: {
+          created_at?: string
+          description: string
+          id?: string
+          is_read?: boolean
+          time: string
+          title: string
+        }
+        Update: {
+          created_at?: string
+          description?: string
+          id?: string
+          is_read?: boolean
+          time?: string
+          title?: string
+        }
+        Relationships: []
+      }
+      dashboard_stats: {
+        Row: {
+          active_venues: number
+          bookings_this_month: number
+          id: string
+          last_updated: string
+          total_guests_today: number
+          total_revenue: number
+        }
+        Insert: {
+          active_venues?: number
+          bookings_this_month?: number
+          id?: string
+          last_updated?: string
+          total_guests_today?: number
+          total_revenue?: number
+        }
+        Update: {
+          active_venues?: number
+          bookings_this_month?: number
+          id?: string
+          last_updated?: string
+          total_guests_today?: number
+          total_revenue?: number
+        }
+        Relationships: []
+      }
       inventory: {
         Row: {
           category: string
@@ -419,6 +473,33 @@ export type Database = {
           },
         ]
       }
+      staff_stats: {
+        Row: {
+          available_today: number
+          id: string
+          last_updated: string
+          on_duty: number
+          total_staff: number
+          upcoming_shifts: number
+        }
+        Insert: {
+          available_today?: number
+          id?: string
+          last_updated?: string
+          on_duty?: number
+          total_staff?: number
+          upcoming_shifts?: number
+        }
+        Update: {
+          available_today?: number
+          id?: string
+          last_updated?: string
+          on_duty?: number
+          total_staff?: number
+          upcoming_shifts?: number
+        }
+        Relationships: []
+      }
       system_settings: {
         Row: {
           category: string
@@ -486,6 +567,24 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      user_preferences: {
+        Row: {
+          sidebar_collapsed: boolean
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          sidebar_collapsed?: boolean
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          sidebar_collapsed?: boolean
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
       }
       user_roles: {
         Row: {

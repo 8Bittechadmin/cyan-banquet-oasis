@@ -1,4 +1,6 @@
-import React, { useState } from 'react';
+
+import React, { useState, useEffect } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import AppLayout from '@/components/AppLayout';
 import PageHeader from '@/components/PageHeader';
 import StatCard from '@/components/StatCard';
@@ -21,97 +23,154 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { ViewCalendarButton, CheckAvailabilityButton, AddTaskButton } from '@/components/Dashboard/ActionButtons';
 import { AddTaskModal } from '@/components/Tasks/AddTaskModal';
-
-// Mock data for the dashboard
-const todaysEvents = [
-  {
-    id: '1',
-    title: 'Smith Wedding Reception',
-    date: 'Apr 5, 2025',
-    time: '14:00 - 22:00',
-    venue: 'Grand Ballroom',
-    clientName: 'John & Sarah Smith',
-    eventType: 'Wedding',
-    status: 'ongoing' as const,
-    guestCount: 150
-  },
-  {
-    id: '2',
-    title: 'Johnson Anniversary Party',
-    date: 'Apr 5, 2025',
-    time: '18:00 - 23:00',
-    venue: 'Garden Terrace',
-    clientName: 'Robert Johnson',
-    eventType: 'Anniversary',
-    status: 'setup' as const,
-    guestCount: 75
-  },
-  {
-    id: '3',
-    title: 'Corporate Training Seminar',
-    date: 'Apr 5, 2025',
-    time: '9:00 - 17:00',
-    venue: 'Conference Room B',
-    clientName: 'Tech Solutions Inc.',
-    eventType: 'Corporate',
-    status: 'completed' as const,
-    guestCount: 50
-  }
-];
-
-const upcomingEvents = [
-  {
-    id: '4',
-    title: 'Davis Wedding Reception',
-    date: 'Apr 6, 2025',
-    time: '16:00 - 23:00',
-    venue: 'Grand Ballroom',
-    clientName: 'Michael & Emma Davis',
-    eventType: 'Wedding',
-    status: 'pending' as const,
-    guestCount: 120
-  },
-  {
-    id: '5',
-    title: 'Charity Fundraiser Gala',
-    date: 'Apr 7, 2025',
-    time: '18:00 - 22:00',
-    venue: 'Main Hall',
-    clientName: 'City Children Foundation',
-    eventType: 'Charity',
-    status: 'pending' as const,
-    guestCount: 200
-  },
-  {
-    id: '6',
-    title: 'Wilson Birthday Party',
-    date: 'Apr 8, 2025',
-    time: '13:00 - 18:00',
-    venue: 'Private Dining Room',
-    clientName: 'Jessica Wilson',
-    eventType: 'Birthday',
-    status: 'pending' as const,
-    guestCount: 30
-  }
-];
-
-const tasks = [
-  { id: '1', title: 'Set up Grand Ballroom for Smith Wedding', completed: true },
-  { id: '2', title: 'Confirm flower delivery for Johnson Anniversary', completed: false },
-  { id: '3', title: 'Staff briefing for evening events', completed: false },
-  { id: '4', title: 'Check AV equipment for Corporate Training', completed: true },
-  { id: '5', title: 'Update menu for Charity Gala', completed: false }
-];
-
-const notificationItems = [
-  { id: '1', title: 'New booking request', description: 'Thomas Anniversary - May 15th', time: '3 min ago' },
-  { id: '2', title: 'Payment received', description: 'Invoice #3892 - Anderson Wedding', time: '1 hour ago' },
-  { id: '3', title: 'Low inventory alert', description: 'Gold linens - 12 remaining', time: '2 hours ago' },
-  { id: '4', title: 'Client feedback', description: '⭐⭐⭐⭐⭐ Brown Birthday Party', time: 'Yesterday' }
-];
+import { supabase } from '@/integrations/supabase/client';
+import { useNavigate } from 'react-router-dom';
 
 const Dashboard = () => {
   const [isAddTaskModalOpen, setIsAddTaskModalOpen] = useState(false);
+  const navigate = useNavigate();
+  
+  // Fetch dashboard statistics
+  const { data: dashboardStats, isLoading: isLoadingStats } = useQuery({
+    queryKey: ['dashboardStats'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('dashboard_stats')
+        .select('*')
+        .single();
+      
+      if (error) throw error;
+      return data;
+    }
+  });
+
+  // Fetch dashboard notifications
+  const { data: notifications } = useQuery({
+    queryKey: ['dashboardNotifications'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('dashboard_notifications')
+        .select('*')
+        .order('created_at', { ascending: false });
+      
+      if (error) throw error;
+      return data;
+    }
+  });
+
+  // Fetch tasks
+  const { data: tasks, refetch: refetchTasks } = useQuery({
+    queryKey: ['tasks'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('tasks')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(5);
+      
+      if (error) throw error;
+      
+      // Format tasks for display
+      return data.map(task => ({
+        id: task.id,
+        title: task.title,
+        completed: task.status === 'completed'
+      }));
+    },
+    initialData: [] // Default to empty array while loading
+  });
+
+  // Mock data for events (would come from Supabase in a full implementation)
+  const todaysEvents = [
+    {
+      id: '1',
+      title: 'Smith Wedding Reception',
+      date: 'Apr 5, 2025',
+      time: '14:00 - 22:00',
+      venue: 'Grand Ballroom',
+      clientName: 'John & Sarah Smith',
+      eventType: 'Wedding',
+      status: 'ongoing' as const,
+      guestCount: 150
+    },
+    {
+      id: '2',
+      title: 'Johnson Anniversary Party',
+      date: 'Apr 5, 2025',
+      time: '18:00 - 23:00',
+      venue: 'Garden Terrace',
+      clientName: 'Robert Johnson',
+      eventType: 'Anniversary',
+      status: 'setup' as const,
+      guestCount: 75
+    },
+    {
+      id: '3',
+      title: 'Corporate Training Seminar',
+      date: 'Apr 5, 2025',
+      time: '9:00 - 17:00',
+      venue: 'Conference Room B',
+      clientName: 'Tech Solutions Inc.',
+      eventType: 'Corporate',
+      status: 'completed' as const,
+      guestCount: 50
+    }
+  ];
+
+  const upcomingEvents = [
+    {
+      id: '4',
+      title: 'Davis Wedding Reception',
+      date: 'Apr 6, 2025',
+      time: '16:00 - 23:00',
+      venue: 'Grand Ballroom',
+      clientName: 'Michael & Emma Davis',
+      eventType: 'Wedding',
+      status: 'pending' as const,
+      guestCount: 120
+    },
+    {
+      id: '5',
+      title: 'Charity Fundraiser Gala',
+      date: 'Apr 7, 2025',
+      time: '18:00 - 22:00',
+      venue: 'Main Hall',
+      clientName: 'City Children Foundation',
+      eventType: 'Charity',
+      status: 'pending' as const,
+      guestCount: 200
+    },
+    {
+      id: '6',
+      title: 'Wilson Birthday Party',
+      date: 'Apr 8, 2025',
+      time: '13:00 - 18:00',
+      venue: 'Private Dining Room',
+      clientName: 'Jessica Wilson',
+      eventType: 'Birthday',
+      status: 'pending' as const,
+      guestCount: 30
+    }
+  ];
+
+  // Handle task completion toggle
+  const toggleTaskCompletion = async (taskId: string, completed: boolean) => {
+    try {
+      await supabase
+        .from('tasks')
+        .update({ status: completed ? 'completed' : 'pending' })
+        .eq('id', taskId);
+      
+      // Refetch tasks to update the UI
+      refetchTasks();
+    } catch (error) {
+      console.error('Error updating task:', error);
+    }
+  };
+
+  const handleAddNewBooking = () => {
+    navigate('/bookings/new');
+  };
   
   return (
     <AppLayout>
@@ -121,31 +180,31 @@ const Dashboard = () => {
         action={{
           label: "Add New Booking",
           icon: <CalendarPlus size={16} />,
-          onClick: () => window.location.href = "/bookings/new"
+          onClick: handleAddNewBooking
         }}
       />
       
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
         <StatCard 
           title="Total Revenue" 
-          value="$12,452" 
+          value={isLoadingStats ? "Loading..." : `$${dashboardStats?.total_revenue.toLocaleString()}`}
           icon={<DollarSign />} 
           trend={{ value: 12, isPositive: true }}
         />
         <StatCard 
           title="Bookings This Month" 
-          value="28" 
+          value={isLoadingStats ? "Loading..." : `${dashboardStats?.bookings_this_month}`}
           icon={<Calendar />}
           trend={{ value: 4, isPositive: true }}
         />
         <StatCard 
           title="Active Venues" 
-          value="4/6" 
+          value={isLoadingStats ? "Loading..." : `${dashboardStats?.active_venues}/6`}
           icon={<Package />}
         />
         <StatCard 
           title="Total Guests Today" 
-          value="275" 
+          value={isLoadingStats ? "Loading..." : `${dashboardStats?.total_guests_today}`}
           icon={<Users />}
           trend={{ value: 5, isPositive: true }}
         />
@@ -180,14 +239,23 @@ const Dashboard = () => {
               <CardContent className="pt-4 px-0">
                 <TabsContent value="tasks" className="mt-0 space-y-4">
                   <div className="space-y-3">
-                    {tasks.map((task) => (
-                      <div key={task.id} className="flex items-start gap-2">
-                        <div className={`w-5 h-5 rounded-full mt-0.5 border flex items-center justify-center ${task.completed ? 'bg-cyan-100 border-cyan-500 text-cyan-500' : 'border-gray-300'}`}>
-                          {task.completed && <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>}
+                    {tasks && tasks.length > 0 ? (
+                      tasks.map((task) => (
+                        <div key={task.id} className="flex items-start gap-2">
+                          <div 
+                            className={`w-5 h-5 rounded-full mt-0.5 border flex items-center justify-center cursor-pointer ${task.completed ? 'bg-cyan-100 border-cyan-500 text-cyan-500' : 'border-gray-300'}`}
+                            onClick={() => toggleTaskCompletion(task.id, !task.completed)}
+                          >
+                            {task.completed && <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>}
+                          </div>
+                          <span className={`text-sm ${task.completed ? 'line-through text-gray-500' : ''}`}>{task.title}</span>
                         </div>
-                        <span className={`text-sm ${task.completed ? 'line-through text-gray-500' : ''}`}>{task.title}</span>
+                      ))
+                    ) : (
+                      <div className="text-center py-2 text-sm text-gray-500">
+                        No tasks available
                       </div>
-                    ))}
+                    )}
                   </div>
                   
                   <Button 
@@ -202,13 +270,19 @@ const Dashboard = () => {
                 
                 <TabsContent value="notifications" className="mt-0">
                   <div className="space-y-3">
-                    {notificationItems.map((item) => (
-                      <div key={item.id} className="border-b border-gray-100 pb-3 last:border-0 last:pb-0">
-                        <h4 className="text-sm font-medium">{item.title}</h4>
-                        <p className="text-xs text-muted-foreground">{item.description}</p>
-                        <span className="text-xs text-gray-400 mt-1">{item.time}</span>
+                    {notifications && notifications.length > 0 ? (
+                      notifications.map((item) => (
+                        <div key={item.id} className="border-b border-gray-100 pb-3 last:border-0 last:pb-0">
+                          <h4 className="text-sm font-medium">{item.title}</h4>
+                          <p className="text-xs text-muted-foreground">{item.description}</p>
+                          <span className="text-xs text-gray-400 mt-1">{item.time}</span>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="text-center py-2 text-sm text-gray-500">
+                        No notifications
                       </div>
-                    ))}
+                    )}
                   </div>
                 </TabsContent>
               </CardContent>
