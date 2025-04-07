@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import AppLayout from '@/components/AppLayout';
 import PageHeader from '@/components/PageHeader';
@@ -9,63 +10,55 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Search, Plus, Filter, Mail, Phone, Building, Calendar } from 'lucide-react';
 import ClientModal from '@/components/Clients/ClientModal';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
 
 const ClientManagement: React.FC = () => {
   const [isAddClientModalOpen, setIsAddClientModalOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [activeTab, setActiveTab] = useState('all');
 
-  // Mock client data
-  const clients = [
-    {
-      id: 'C001',
-      name: 'Johnson Family',
-      type: 'individual',
-      contact: 'Robert Johnson',
-      email: 'robert@example.com',
-      phone: '(555) 123-4567',
-      events: 3,
-      status: 'active'
+  // Fetch clients from Supabase
+  const { data: clients = [], isLoading } = useQuery({
+    queryKey: ['clients'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('clients')
+        .select('*')
+        .order('name');
+      
+      if (error) throw error;
+      return data || [];
     },
-    {
-      id: 'C002',
-      name: 'TechCorp Inc.',
-      type: 'corporate',
-      contact: 'Sarah Miller',
-      email: 'sarah@techcorp.com',
-      phone: '(555) 987-6543',
-      events: 5,
-      status: 'active'
-    },
-    {
-      id: 'C003',
-      name: 'Smith Wedding',
-      type: 'individual',
-      contact: 'John Smith',
-      email: 'john@example.com',
-      phone: '(555) 456-7890',
-      events: 1,
-      status: 'inactive'
-    },
-    {
-      id: 'C004',
-      name: 'City Council',
-      type: 'government',
-      contact: 'Mayor Wilson',
-      email: 'mayor@citycouncil.gov',
-      phone: '(555) 789-0123',
-      events: 2,
-      status: 'active'
-    },
-    {
-      id: 'C005',
-      name: 'Children\'s Hospital',
-      type: 'non-profit',
-      contact: 'Dr. Emily Chen',
-      email: 'emily@childrenshospital.org',
-      phone: '(555) 234-5678',
-      events: 4,
-      status: 'active'
-    },
-  ];
+  });
+
+  // Filter clients based on search query and active tab
+  const filteredClients = clients.filter(client => {
+    const matchesSearch = 
+      searchQuery === '' || 
+      client.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      client.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      client.phone?.toLowerCase().includes(searchQuery.toLowerCase());
+    
+    const matchesTab = 
+      activeTab === 'all' || 
+      client.client_type === activeTab;
+    
+    return matchesSearch && matchesTab;
+  });
+
+  // Get client statistics
+  const clientStats = {
+    total: clients.length,
+    active: clients.filter(c => c.status !== 'inactive').length,
+    newThisMonth: clients.filter(c => {
+      const createdAt = new Date(c.created_at || '');
+      const now = new Date();
+      return createdAt.getMonth() === now.getMonth() && 
+             createdAt.getFullYear() === now.getFullYear();
+    }).length,
+    avgEvents: 0 // Would require joining with events table
+  };
   
   const getStatusColor = (status: string) => {
     switch(status) {
@@ -103,7 +96,7 @@ const ClientManagement: React.FC = () => {
             <CardTitle className="text-sm font-medium">Total Clients</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">42</div>
+            <div className="text-2xl font-bold">{clientStats.total}</div>
             <p className="text-xs text-muted-foreground mt-1">Across all categories</p>
           </CardContent>
         </Card>
@@ -112,8 +105,12 @@ const ClientManagement: React.FC = () => {
             <CardTitle className="text-sm font-medium">Active Clients</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">36</div>
-            <p className="text-xs text-muted-foreground mt-1">86% of total clients</p>
+            <div className="text-2xl font-bold">{clientStats.active}</div>
+            <p className="text-xs text-muted-foreground mt-1">
+              {clientStats.total > 0 
+                ? `${Math.round((clientStats.active / clientStats.total) * 100)}% of total clients` 
+                : 'No clients yet'}
+            </p>
           </CardContent>
         </Card>
         <Card>
@@ -121,8 +118,10 @@ const ClientManagement: React.FC = () => {
             <CardTitle className="text-sm font-medium">New This Month</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">8</div>
-            <p className="text-xs text-muted-foreground mt-1">+14% from last month</p>
+            <div className="text-2xl font-bold">{clientStats.newThisMonth}</div>
+            <p className="text-xs text-muted-foreground mt-1">
+              {clientStats.newThisMonth > 0 ? '+' + clientStats.newThisMonth + ' from last month' : 'No new clients this month'}
+            </p>
           </CardContent>
         </Card>
         <Card>
@@ -130,13 +129,18 @@ const ClientManagement: React.FC = () => {
             <CardTitle className="text-sm font-medium">Avg. Events per Client</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">2.4</div>
+            <div className="text-2xl font-bold">{clientStats.avgEvents}</div>
             <p className="text-xs text-muted-foreground mt-1">Based on active clients</p>
           </CardContent>
         </Card>
       </div>
       
-      <Tabs defaultValue="all" className="mb-6">
+      <Tabs 
+        defaultValue="all" 
+        value={activeTab}
+        onValueChange={setActiveTab}
+        className="mb-6"
+      >
         <TabsList className="mb-4">
           <TabsTrigger value="all">All Clients</TabsTrigger>
           <TabsTrigger value="individual">Individual</TabsTrigger>
@@ -149,7 +153,9 @@ const ClientManagement: React.FC = () => {
             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-500" />
             <Input 
               placeholder="Search clients..." 
-              className="w-full pl-9" 
+              className="w-full pl-9"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
             />
           </div>
           <Button variant="outline" className="flex gap-2">
@@ -164,57 +170,78 @@ const ClientManagement: React.FC = () => {
             <CardDescription>View and manage your clients</CardDescription>
           </CardHeader>
           <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>ID</TableHead>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Type</TableHead>
-                  <TableHead className="hidden md:table-cell">Contact</TableHead>
-                  <TableHead className="hidden lg:table-cell">Email</TableHead>
-                  <TableHead className="hidden xl:table-cell">Phone</TableHead>
-                  <TableHead className="hidden sm:table-cell">Events</TableHead>
-                  <TableHead>Status</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {clients.map((client) => (
-                  <TableRow key={client.id} className="cursor-pointer hover:bg-gray-50">
-                    <TableCell className="font-medium">{client.id}</TableCell>
-                    <TableCell>{client.name}</TableCell>
-                    <TableCell>
-                      <Badge className={getTypeColor(client.type)}>
-                        {client.type.charAt(0).toUpperCase() + client.type.slice(1)}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="hidden md:table-cell">{client.contact}</TableCell>
-                    <TableCell className="hidden lg:table-cell">
-                      <div className="flex items-center gap-1">
-                        <Mail className="h-3 w-3 text-gray-500" />
-                        <span>{client.email}</span>
-                      </div>
-                    </TableCell>
-                    <TableCell className="hidden xl:table-cell">
-                      <div className="flex items-center gap-1">
-                        <Phone className="h-3 w-3 text-gray-500" />
-                        <span>{client.phone}</span>
-                      </div>
-                    </TableCell>
-                    <TableCell className="hidden sm:table-cell">
-                      <div className="flex items-center gap-1">
-                        <Calendar className="h-3 w-3 text-gray-500" />
-                        <span>{client.events}</span>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <Badge className={getStatusColor(client.status)}>
-                        {client.status.charAt(0).toUpperCase() + client.status.slice(1)}
-                      </Badge>
-                    </TableCell>
+            {isLoading ? (
+              <div className="flex items-center justify-center h-32">
+                <p>Loading clients...</p>
+              </div>
+            ) : filteredClients.length > 0 ? (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>ID</TableHead>
+                    <TableHead>Name</TableHead>
+                    <TableHead>Type</TableHead>
+                    <TableHead className="hidden md:table-cell">Contact</TableHead>
+                    <TableHead className="hidden lg:table-cell">Email</TableHead>
+                    <TableHead className="hidden xl:table-cell">Phone</TableHead>
+                    <TableHead className="hidden sm:table-cell">Events</TableHead>
+                    <TableHead>Status</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {filteredClients.map((client) => (
+                    <TableRow key={client.id} className="cursor-pointer hover:bg-gray-50">
+                      <TableCell className="font-medium">{client.id.substring(0, 6)}</TableCell>
+                      <TableCell>{client.name}</TableCell>
+                      <TableCell>
+                        <Badge className={getTypeColor(client.client_type || 'individual')}>
+                          {(client.client_type || 'Individual').charAt(0).toUpperCase() + (client.client_type || 'individual').slice(1)}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="hidden md:table-cell">{client.name}</TableCell>
+                      <TableCell className="hidden lg:table-cell">
+                        {client.email && (
+                          <div className="flex items-center gap-1">
+                            <Mail className="h-3 w-3 text-gray-500" />
+                            <span>{client.email}</span>
+                          </div>
+                        )}
+                      </TableCell>
+                      <TableCell className="hidden xl:table-cell">
+                        {client.phone && (
+                          <div className="flex items-center gap-1">
+                            <Phone className="h-3 w-3 text-gray-500" />
+                            <span>{client.phone}</span>
+                          </div>
+                        )}
+                      </TableCell>
+                      <TableCell className="hidden sm:table-cell">
+                        <div className="flex items-center gap-1">
+                          <Calendar className="h-3 w-3 text-gray-500" />
+                          <span>0</span>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <Badge className={getStatusColor(client.status || 'active')}>
+                          {(client.status || 'Active').charAt(0).toUpperCase() + (client.status || 'active').slice(1)}
+                        </Badge>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            ) : (
+              <div className="text-center p-8">
+                <p className="text-muted-foreground">No clients found</p>
+                <Button 
+                  variant="outline" 
+                  className="mt-4"
+                  onClick={() => setIsAddClientModalOpen(true)}
+                >
+                  Add Client
+                </Button>
+              </div>
+            )}
           </CardContent>
         </Card>
       </Tabs>

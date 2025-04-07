@@ -15,6 +15,8 @@ import { Form } from '@/components/ui/form';
 import { Button } from '@/components/ui/button';
 import { InputField, TextareaField, SelectField } from '@/components/Common/FormFields';
 import { DialogFooter } from '@/components/ui/dialog';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
 
 interface ClientModalProps {
   open: boolean;
@@ -23,6 +25,7 @@ interface ClientModalProps {
 
 export const ClientModal: React.FC<ClientModalProps> = ({ open, onOpenChange }) => {
   const [isSubmitting, setIsSubmitting] = React.useState(false);
+  const queryClient = useQueryClient();
   
   const form = useForm<ClientFormValues>({
     resolver: zodResolver(ClientFormSchema),
@@ -35,30 +38,49 @@ export const ClientModal: React.FC<ClientModalProps> = ({ open, onOpenChange }) 
     }
   });
 
+  const createClient = useMutation({
+    mutationFn: async (values: ClientFormValues) => {
+      const { data, error } = await supabase
+        .from('clients')
+        .insert({
+          name: values.name,
+          phone: values.phone,
+          email: values.email,
+          client_type: values.type,
+          address: values.address || null,
+          notes: values.notes || null
+        })
+        .select();
+      
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      toast({
+        title: 'Client Added',
+        description: 'Client has been added successfully.',
+      });
+      queryClient.invalidateQueries({ queryKey: ['clients'] });
+      form.reset();
+      onOpenChange(false);
+    },
+    onError: (error: any) => {
+      console.error('Error adding client:', error);
+      toast({
+        title: 'Error',
+        description: `There was a problem adding the client: ${error.message}`,
+        variant: 'destructive',
+      });
+    },
+  });
+
   const handleSubmit = async (values: ClientFormValues) => {
     setIsSubmitting(true);
     
     try {
-      // Here would be the API call to add the client to your database
-      console.log('Client data submitted:', values);
-      
-      // Simulate an API delay
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      toast({
-        title: 'Client Added',
-        description: `${values.name} has been added successfully.`,
-      });
-      
-      onOpenChange(false);
-      form.reset();
+      await createClient.mutateAsync(values);
     } catch (error) {
-      console.error('Error adding client:', error);
-      toast({
-        title: 'Error',
-        description: 'There was a problem adding the client.',
-        variant: 'destructive',
-      });
+      console.error('Error in handleSubmit:', error);
     } finally {
       setIsSubmitting(false);
     }

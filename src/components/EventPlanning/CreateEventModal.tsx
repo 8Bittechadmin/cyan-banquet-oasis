@@ -17,6 +17,13 @@ const CreateEventModal: React.FC<CreateEventModalProps> = ({
 }) => {
   const queryClient = useQueryClient();
   
+  // When the modal opens, refresh the clients data
+  React.useEffect(() => {
+    if (open) {
+      queryClient.invalidateQueries({ queryKey: ['clients'] });
+    }
+  }, [open, queryClient]);
+  
   const createEvent = useMutation({
     mutationFn: async (values: any) => {
       const { data, error } = await supabase
@@ -45,7 +52,7 @@ const CreateEventModal: React.FC<CreateEventModalProps> = ({
       queryClient.invalidateQueries({ queryKey: ['bookings'] });
       onOpenChange(false);
     },
-    onError: (error) => {
+    onError: (error: any) => {
       toast({
         title: "Error",
         description: `Failed to create event: ${error.message}`,

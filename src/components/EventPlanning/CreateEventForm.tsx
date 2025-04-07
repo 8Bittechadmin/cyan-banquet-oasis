@@ -53,8 +53,8 @@ export function CreateEventForm({ onSubmit, isSubmitting, onCancel }: CreateEven
     },
   });
   
-  // Fetch venues for dropdown
-  const { data: venues = [] } = useQuery({
+  // Fetch venues for dropdown with refreshing enabled
+  const { data: venues = [], isLoading: loadingVenues } = useQuery({
     queryKey: ['venues'],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -67,8 +67,8 @@ export function CreateEventForm({ onSubmit, isSubmitting, onCancel }: CreateEven
     },
   });
   
-  // Fetch clients for dropdown
-  const { data: clients = [] } = useQuery({
+  // Fetch clients for dropdown with refreshing enabled
+  const { data: clients = [], isLoading: loadingClients } = useQuery({
     queryKey: ['clients'],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -79,6 +79,9 @@ export function CreateEventForm({ onSubmit, isSubmitting, onCancel }: CreateEven
       if (error) throw error;
       return data || [];
     },
+    // This ensures the client list is fresh when the form is opened
+    refetchOnMount: true,
+    refetchOnWindowFocus: true,
   });
   
   const venueOptions = venues.map(venue => ({
@@ -123,7 +126,7 @@ export function CreateEventForm({ onSubmit, isSubmitting, onCancel }: CreateEven
             name="venue_id"
             label="Venue"
             options={venueOptions}
-            placeholder="Select venue"
+            placeholder={loadingVenues ? "Loading venues..." : "Select venue"}
           />
           
           <SelectField
@@ -131,7 +134,7 @@ export function CreateEventForm({ onSubmit, isSubmitting, onCancel }: CreateEven
             name="client_id"
             label="Client"
             options={clientOptions}
-            placeholder="Select client"
+            placeholder={loadingClients ? "Loading clients..." : "Select client"}
           />
           
           <DateTimeField
