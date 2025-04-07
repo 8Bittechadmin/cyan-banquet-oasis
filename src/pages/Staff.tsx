@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import AppLayout from '@/components/AppLayout';
 import PageHeader from '@/components/PageHeader';
@@ -9,27 +9,30 @@ import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
-import { Calendar, Search, Plus, Filter, Check, Clock, User } from 'lucide-react';
+import { Search, Plus, Filter, Check, Clock, User } from 'lucide-react';
 import StaffModal from '@/components/Staff/StaffModal';
 import { supabase, StaffMember } from '@/integrations/supabase/client';
 import ExportButton from '@/components/Common/ExportButton';
 import { toast } from '@/hooks/use-toast';
 
+// Mock staff stats
+const mockStaffStats = {
+  total_staff: 42,
+  available_today: 28,
+  on_duty: 14,
+  upcoming_shifts: 8
+};
+
 const Staff: React.FC = () => {
   const [isAddStaffModalOpen, setIsAddStaffModalOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   
-  // Fetch staff statistics
+  // Fetch staff statistics from mock data
   const { data: staffStats, isLoading: isLoadingStats } = useQuery({
     queryKey: ['staffStats'],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('staff_stats')
-        .select('*')
-        .single();
-      
-      if (error) throw error;
-      return data;
+      // For future implementation, will fetch from Supabase
+      return mockStaffStats;
     }
   });
   

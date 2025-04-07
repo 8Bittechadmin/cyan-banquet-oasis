@@ -1,20 +1,18 @@
 
 import React from 'react';
-import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { format } from 'date-fns';
-import { Calendar as CalendarIcon } from 'lucide-react';
-
-import { Form } from '@/components/ui/form';
+import { useForm } from 'react-hook-form';
 import { Button } from '@/components/ui/button';
-import { InputField, TextareaField, SelectField } from '@/components/Common/FormFields';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Calendar } from '@/components/ui/calendar';
-import { cn } from '@/lib/utils';
-import { FormField, FormControl, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { TaskFormSchema, TaskFormValues, STATUS_OPTIONS } from './TaskFormSchema';
+import { Form } from '@/components/ui/form';
+import { InputField, SelectField, DateTimeField, TextareaField } from '@/components/Common/FormFields';
+import { taskFormSchema, TaskFormSchemaType } from './TaskFormSchema';
+import { supabase } from '@/integrations/supabase/client';
+import { useQuery } from '@tanstack/react-query';
 
-interface AddTaskFormProps {
+// Export this type so it can be used in AddTaskModal
+export type TaskFormValues = TaskFormSchemaType;
+
+type AddTaskFormProps = {
   onSubmit: (values: TaskFormValues) => void;
   isSubmitting: boolean;
   bookingId?: string;
@@ -22,81 +20,116 @@ interface AddTaskFormProps {
 
 export function AddTaskForm({ onSubmit, isSubmitting, bookingId }: AddTaskFormProps) {
   const form = useForm<TaskFormValues>({
-    resolver: zodResolver(TaskFormSchema),
+    resolver: zodResolver(taskFormSchema),
     defaultValues: {
       title: '',
       description: '',
-      booking_id: bookingId || '',
       status: 'pending',
+      booking_id: bookingId || null,
+      due_date: null,
+      assigned_to: null,
     },
   });
+
+  const { data: staff } = useQuery({
+    queryKey: ['staff'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('staff')
+        .select('id, name, position')
+        .order('name');
+      
+      if (error) throw error;
+      return data;
+    },
+    enabled: process.env.NODE_ENV !== 'development' // Only fetch in production
+  });
+
+  const { data: bookings } = useQuery({
+    queryKey: ['bookingsSimple'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('bookings')
+        .select('id, event_name')
+        .order('created_at', { ascending: false });
+      
+      if (error) throw error;
+      return data;
+    },
+    enabled: !bookingId && process.env.NODE_ENV !== 'development', // Only fetch if no bookingId and in production
+  });
+
+  const staffOptions = staff?.map(s => ({
+    value: s.id,
+    label: `${s.name} (${s.position})`
+  })) || [];
+
+  const bookingOptions = bookings?.map(b => ({
+    value: b.id,
+    label: b.event_name
+  })) || [];
 
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
         <InputField
-          form={form}
+          control={form.control}
           name="title"
           label="Task Title"
           placeholder="Enter task title"
         />
         
         <TextareaField
-          form={form}
+          control={form.control}
           name="description"
           label="Description"
           placeholder="Enter task description"
         />
         
-        <div className="grid grid-cols-2 gap-4">
-          <FormField
-            control={form.control}
-            name="due_date"
-            render={({ field }) => (
-              <FormItem className="flex flex-col">
-                <FormLabel>Due Date</FormLabel>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <FormControl>
-                      <Button
-                        variant={"outline"}
-                        className={cn(
-                          "w-full pl-3 text-left font-normal",
-                          !field.value && "text-muted-foreground"
-                        )}
-                      >
-                        {field.value ? (
-                          format(field.value, "PPP")
-                        ) : (
-                          <span>Pick a date</span>
-                        )}
-                        <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                      </Button>
-                    </FormControl>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0" align="start">
-                    <Calendar
-                      mode="single"
-                      selected={field.value}
-                      onSelect={field.onChange}
-                      initialFocus
-                    />
-                  </PopoverContent>
-                </Popover>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
+        <DateTimeField
+          control={form.control}
+          name="due_date"
+          label="Due Date"
+        />
+        
+        <SelectField
+          control={form.control}
+          name="status"
+          label="Status"
+          options={[
+            { value: 'pending', label: 'Pending' },
+            { value: 'in-progress', label: 'In Progress' },
+            { value: 'completed', label: 'Completed' },
+          ]}
+        />
+        
+        <SelectField
+          control={form.control}
+          name="assigned_to"
+          label="Assigned To"
+          options={staffOptions}
+          placeholder="Select staff member"
+        />
+        
+        {!bookingId && (
           <SelectField
-            form={form}
-            name="status"
-            label="Status"
-            options={STATUS_OPTIONS}
+            control={form.control}
+            name="booking_id"
+            label="Related Event"
+            options={bookingOptions}
+            placeholder="Select event (optional)"
           />
-        </div>
-
-        <div className="flex justify-end pt-4">
+        )}
+        
+        <div className="flex justify-end space-x-2 pt-2">
+          <Button 
+            type="button" 
+            variant="outline"
+            onClick={() => form.reset()}
+            disabled={isSubmitting}
+          >
+            Cancel
+          </Button>
           <Button type="submit" disabled={isSubmitting}>
             {isSubmitting ? 'Creating...' : 'Create Task'}
           </Button>
@@ -105,3 +138,5 @@ export function AddTaskForm({ onSubmit, isSubmitting, bookingId }: AddTaskFormPr
     </Form>
   );
 }
+
+export default AddTaskForm;

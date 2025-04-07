@@ -39,64 +39,21 @@ const Sidebar: React.FC<SidebarProps> = ({ className }) => {
   const location = useLocation();
   const navigate = useNavigate();
   
-  // Load sidebar state from Supabase or localStorage
+  // Load sidebar state from localStorage only
   useEffect(() => {
-    const loadSidebarState = async () => {
-      // Try to get the sidebar state from localStorage first
-      const localState = localStorage.getItem('sidebar:state');
-      if (localState) {
-        setIsCollapsed(localState === 'collapsed');
-      }
-      
-      // If user is authenticated, try to get state from Supabase
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session?.user) {
-        try {
-          const { data, error } = await supabase
-            .from('user_preferences')
-            .select('sidebar_collapsed')
-            .eq('user_id', session.user.id)
-            .single();
-          
-          if (data) {
-            setIsCollapsed(data.sidebar_collapsed);
-            // Update localStorage to match
-            localStorage.setItem('sidebar:state', data.sidebar_collapsed ? 'collapsed' : 'expanded');
-          }
-        } catch (error) {
-          console.error('Error loading sidebar state:', error);
-        }
-      }
-    };
-    
-    loadSidebarState();
+    const localState = localStorage.getItem('sidebar:state');
+    if (localState) {
+      setIsCollapsed(localState === 'collapsed');
+    }
   }, []);
   
   // Save sidebar state when it changes
-  const toggleSidebar = async () => {
+  const toggleSidebar = () => {
     const newState = !isCollapsed;
     setIsCollapsed(newState);
     
-    // Always save to localStorage
+    // Save to localStorage
     localStorage.setItem('sidebar:state', newState ? 'collapsed' : 'expanded');
-    
-    // If user is authenticated, save to Supabase
-    const { data: { session } } = await supabase.auth.getSession();
-    if (session?.user) {
-      try {
-        await supabase
-          .from('user_preferences')
-          .upsert({
-            user_id: session.user.id,
-            sidebar_collapsed: newState,
-            updated_at: new Date().toISOString()
-          }, { 
-            onConflict: 'user_id' 
-          });
-      } catch (error) {
-        console.error('Error saving sidebar state:', error);
-      }
-    }
   };
   
   const SidebarLink: React.FC<SidebarLinkProps> = ({ to, icon, label, isCollapsed, isActive }) => (

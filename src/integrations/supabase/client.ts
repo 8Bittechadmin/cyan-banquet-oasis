@@ -181,6 +181,40 @@ export type ClientMessage = {
   updated_at: string | null;
 }
 
+// New types for our recently created tables
+export type UserPreference = {
+  user_id: string;
+  sidebar_collapsed: boolean;
+  updated_at: string;
+}
+
+export type DashboardStat = {
+  id: string;
+  total_revenue: number;
+  bookings_this_month: number;
+  active_venues: number;
+  total_guests_today: number;
+  last_updated: string;
+}
+
+export type DashboardNotification = {
+  id: string;
+  title: string;
+  description: string;
+  time: string;
+  is_read: boolean;
+  created_at: string;
+}
+
+export type StaffStat = {
+  id: string;
+  total_staff: number;
+  available_today: number;
+  on_duty: number;
+  upcoming_shifts: number;
+  last_updated: string;
+}
+
 // Type for form submissions to ensure type safety
 export type UserRoleInsert = {
   name: string;
