@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import AppLayout from '@/components/AppLayout';
 import PageHeader from '@/components/PageHeader';
@@ -7,71 +8,83 @@ import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import { Calendar, Clipboard, Check, X, Search, Filter, ChevronRight } from 'lucide-react';
+import { Calendar, Clipboard, Check, X, Search, Filter, ChevronRight, Edit, Trash } from 'lucide-react';
 import CreateEventModal from '@/components/EventPlanning/CreateEventModal';
+import EditEventModal from '@/components/EventPlanning/EditEventModal';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 
 const EventPlanning: React.FC = () => {
   const [isCreateEventModalOpen, setIsCreateEventModalOpen] = useState(false);
+  const [isEditEventModalOpen, setIsEditEventModalOpen] = useState(false);
+  const [selectedEvent, setSelectedEvent] = useState<any>(null);
+  const [searchTerm, setSearchTerm] = useState('');
   
-  // Mock event data
-  const upcomingEvents = [
-    {
-      id: 'E001',
-      name: 'Johnson-Smith Wedding',
-      date: '2025-04-15',
-      venue: 'Grand Ballroom',
-      client: 'Sarah Johnson',
-      eventType: 'Wedding',
-      progress: 75,
-      tasks: {
-        total: 24,
-        completed: 18
-      }
+  // Fetch real events from the database
+  const { data: events = [], isLoading } = useQuery({
+    queryKey: ['bookings'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('bookings')
+        .select(`
+          id, 
+          event_name, 
+          event_type,
+          start_date, 
+          end_date, 
+          guest_count,
+          notes,
+          status,
+          venue_id, 
+          client_id,
+          venues:venue_id (name),
+          clients:client_id (name)
+        `)
+        .order('start_date', { ascending: true });
+      
+      if (error) throw error;
+      return data || [];
     },
-    {
-      id: 'E002',
-      name: 'TechCorp Annual Conference',
-      date: '2025-04-10',
-      venue: 'Conference Hall A',
-      client: 'TechCorp Inc.',
-      eventType: 'Corporate',
-      progress: 60,
-      tasks: {
-        total: 18,
-        completed: 11
-      }
-    },
-    {
-      id: 'E003',
-      name: 'Smith Graduation Party',
-      date: '2025-04-20',
-      venue: 'Garden Pavilion',
-      client: 'John Smith',
-      eventType: 'Graduation',
-      progress: 40,
-      tasks: {
-        total: 15,
-        completed: 6
-      }
-    },
-    {
-      id: 'E004',
-      name: 'Martinez Sweet 16',
-      date: '2025-04-08',
-      venue: 'Terrace Hall',
-      client: 'Carlos Martinez',
-      eventType: 'Birthday',
-      progress: 90,
-      tasks: {
-        total: 20,
-        completed: 18
-      }
-    }
-  ];
+  });
   
-  // Mock task list for first event
+  // Filter events based on search term
+  const filteredEvents = events.filter(event => 
+    event.event_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    event.event_type.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    event.clients?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    event.venues?.name?.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  // Calculate progress for display purposes - this is just a visualization
+  const calculateProgress = (event: any) => {
+    const now = new Date();
+    const startDate = new Date(event.start_date);
+    const endDate = new Date(event.end_date);
+    
+    // If event is in the past, it's 100% complete
+    if (now > endDate) return 100;
+    
+    // If event is in the future, calculate based on planning timeline
+    // Assuming planning starts 30 days before the event
+    const planningStart = new Date(startDate);
+    planningStart.setDate(planningStart.getDate() - 30);
+    
+    if (now < planningStart) return 10; // Just started planning
+    
+    // Calculate progress based on position in planning timeline
+    const totalPlanningTime = endDate.getTime() - planningStart.getTime();
+    const elapsedPlanningTime = now.getTime() - planningStart.getTime();
+    
+    const progress = Math.min(Math.floor((elapsedPlanningTime / totalPlanningTime) * 100), 95);
+    return Math.max(10, progress); // Ensure progress is at least 10%
+  };
+  
+  const handleEditEvent = (event: any) => {
+    setSelectedEvent(event);
+    setIsEditEventModalOpen(true);
+  };
+
+  // Mock task list for demonstration
   const sampleEventTasks = [
     { id: 1, title: 'Confirm final guest count', status: 'completed', dueDate: '2025-04-05', assignedTo: 'Jane Davis' },
     { id: 2, title: 'Arrange floral centerpieces', status: 'completed', dueDate: '2025-04-10', assignedTo: 'Mark Wilson' },
@@ -116,6 +129,8 @@ const EventPlanning: React.FC = () => {
               <input 
                 placeholder="Search events..." 
                 className="w-full pl-9 h-10 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
               />
             </div>
             <Button variant="outline" className="flex gap-2">
@@ -124,88 +139,126 @@ const EventPlanning: React.FC = () => {
             </Button>
           </div>
           
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-2">
-            {upcomingEvents.map(event => (
-              <Card key={event.id} className="overflow-hidden hover:border-cyan-500/50 transition-colors cursor-pointer">
-                <CardHeader className="pb-2">
-                  <div className="flex justify-between">
-                    <CardTitle className="text-base">{event.name}</CardTitle>
-                    <Badge>{event.eventType}</Badge>
-                  </div>
-                  <CardDescription className="flex justify-between items-center">
-                    <span>{event.date}</span>
-                    <span className="font-medium">{event.venue}</span>
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="pb-0">
-                  <div className="mb-4">
-                    <div className="flex justify-between text-sm mb-1">
-                      <span className="text-muted-foreground">Planning Progress</span>
-                      <span className="font-medium">{event.progress}%</span>
+          {isLoading ? (
+            <Card>
+              <CardContent className="p-8 text-center">
+                <p>Loading events...</p>
+              </CardContent>
+            </Card>
+          ) : filteredEvents.length > 0 ? (
+            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-2">
+              {filteredEvents.map(event => (
+                <Card key={event.id} className="overflow-hidden hover:border-cyan-500/50 transition-colors cursor-pointer">
+                  <CardHeader className="pb-2">
+                    <div className="flex justify-between">
+                      <CardTitle className="text-base">{event.event_name}</CardTitle>
+                      <Badge>{event.event_type}</Badge>
                     </div>
-                    <Progress value={event.progress} className="h-2" />
-                  </div>
-                  
-                  <div className="flex justify-between items-center">
-                    <div className="text-sm flex items-center">
-                      <Clipboard className="h-4 w-4 mr-1 text-muted-foreground" />
-                      <span>
-                        <span className="font-medium">{event.tasks.completed}</span>
-                        <span className="text-muted-foreground">/{event.tasks.total} tasks complete</span>
-                      </span>
+                    <CardDescription className="flex justify-between items-center">
+                      <span>{new Date(event.start_date).toLocaleDateString()}</span>
+                      <span className="font-medium">{event.venues?.name || 'No venue'}</span>
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="pb-0">
+                    <div className="mb-4">
+                      <div className="flex justify-between text-sm mb-1">
+                        <span className="text-muted-foreground">Planning Progress</span>
+                        <span className="font-medium">{calculateProgress(event)}%</span>
+                      </div>
+                      <Progress value={calculateProgress(event)} className="h-2" />
                     </div>
-                    <Button variant="ghost" size="sm" className="text-cyan-600">
-                      <span className="mr-1">View</span>
-                      <ChevronRight className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
+                    
+                    <div className="flex justify-between items-center">
+                      <div className="text-sm flex items-center">
+                        <Clipboard className="h-4 w-4 mr-1 text-muted-foreground" />
+                        <span className="text-muted-foreground">
+                          Client: {event.clients?.name || 'No client'}
+                        </span>
+                      </div>
+                      <div className="flex">
+                        <Button 
+                          variant="ghost" 
+                          size="icon"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleEditEvent(event);
+                          }}
+                        >
+                          <Edit className="h-4 w-4 text-cyan-600" />
+                        </Button>
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          className="text-cyan-600"
+                          onClick={() => handleEditEvent(event)}
+                        >
+                          <span className="mr-1">View</span>
+                          <ChevronRight className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          ) : (
+            <Card>
+              <CardContent className="p-8 text-center">
+                <p>No events found. Create a new event to get started.</p>
+                <Button 
+                  className="mt-4"
+                  onClick={() => setIsCreateEventModalOpen(true)}
+                >
+                  Create Event
+                </Button>
+              </CardContent>
+            </Card>
+          )}
           
-          <Card>
-            <CardHeader>
-              <CardTitle>Johnson-Smith Wedding: Task List</CardTitle>
-              <CardDescription>
-                Planning progress: 75% complete (18 of 24 tasks completed)
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="w-12">Status</TableHead>
-                    <TableHead>Task</TableHead>
-                    <TableHead className="hidden md:table-cell">Due Date</TableHead>
-                    <TableHead className="hidden sm:table-cell">Assigned To</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {sampleEventTasks.map(task => (
-                    <TableRow key={task.id}>
-                      <TableCell>
-                        {task.status === 'completed' ? (
-                          <div className="bg-green-100 text-green-600 p-1 rounded-full w-6 h-6 flex items-center justify-center">
-                            <Check className="h-4 w-4" />
-                          </div>
-                        ) : (
-                          <div className="bg-gray-100 text-gray-600 p-1 rounded-full w-6 h-6 flex items-center justify-center">
-                            <X className="h-4 w-4" />
-                          </div>
-                        )}
-                      </TableCell>
-                      <TableCell className={task.status === 'completed' ? 'line-through text-muted-foreground' : ''}>
-                        {task.title}
-                      </TableCell>
-                      <TableCell className="hidden md:table-cell">{task.dueDate}</TableCell>
-                      <TableCell className="hidden sm:table-cell">{task.assignedTo}</TableCell>
+          {filteredEvents.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle>{filteredEvents[0].event_name}: Task List</CardTitle>
+                <CardDescription>
+                  Planning progress: {calculateProgress(filteredEvents[0])}% complete
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="w-12">Status</TableHead>
+                      <TableHead>Task</TableHead>
+                      <TableHead className="hidden md:table-cell">Due Date</TableHead>
+                      <TableHead className="hidden sm:table-cell">Assigned To</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </CardContent>
-          </Card>
+                  </TableHeader>
+                  <TableBody>
+                    {sampleEventTasks.map(task => (
+                      <TableRow key={task.id}>
+                        <TableCell>
+                          {task.status === 'completed' ? (
+                            <div className="bg-green-100 text-green-600 p-1 rounded-full w-6 h-6 flex items-center justify-center">
+                              <Check className="h-4 w-4" />
+                            </div>
+                          ) : (
+                            <div className="bg-gray-100 text-gray-600 p-1 rounded-full w-6 h-6 flex items-center justify-center">
+                              <X className="h-4 w-4" />
+                            </div>
+                          )}
+                        </TableCell>
+                        <TableCell className={task.status === 'completed' ? 'line-through text-muted-foreground' : ''}>
+                          {task.title}
+                        </TableCell>
+                        <TableCell className="hidden md:table-cell">{task.dueDate}</TableCell>
+                        <TableCell className="hidden sm:table-cell">{task.assignedTo}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
+          )}
         </TabsContent>
         
         <TabsContent value="templates" className="m-0">
@@ -248,6 +301,12 @@ const EventPlanning: React.FC = () => {
       <CreateEventModal
         open={isCreateEventModalOpen}
         onOpenChange={setIsCreateEventModalOpen}
+      />
+
+      <EditEventModal
+        open={isEditEventModalOpen}
+        onOpenChange={setIsEditEventModalOpen}
+        event={selectedEvent}
       />
     </AppLayout>
   );

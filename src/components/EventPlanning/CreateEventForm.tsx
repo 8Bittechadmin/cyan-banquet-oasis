@@ -26,6 +26,7 @@ type CreateEventFormProps = {
   onSubmit: (values: EventFormValues) => void;
   isSubmitting: boolean;
   onCancel: () => void;
+  initialValues?: Partial<EventFormValues>;
 }
 
 const eventTypes = [
@@ -38,10 +39,10 @@ const eventTypes = [
   { value: 'other', label: 'Other' },
 ];
 
-export function CreateEventForm({ onSubmit, isSubmitting, onCancel }: CreateEventFormProps) {
+export function CreateEventForm({ onSubmit, isSubmitting, onCancel, initialValues }: CreateEventFormProps) {
   const form = useForm<EventFormValues>({
     resolver: zodResolver(eventFormSchema),
-    defaultValues: {
+    defaultValues: initialValues || {
       event_name: '',
       event_type: '',
       venue_id: '',
@@ -94,9 +95,17 @@ export function CreateEventForm({ onSubmit, isSubmitting, onCancel }: CreateEven
     label: client.name
   }));
 
+  const handleSubmitForm = (values: EventFormValues) => {
+    // Make sure guest_count is a number
+    onSubmit({
+      ...values,
+      guest_count: Number(values.guest_count)
+    });
+  };
+
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+      <form onSubmit={form.handleSubmit(handleSubmitForm)} className="space-y-4">
         <InputField
           form={form}
           name="event_name"
@@ -119,6 +128,10 @@ export function CreateEventForm({ onSubmit, isSubmitting, onCancel }: CreateEven
             label="Guest Count"
             placeholder="Enter number of guests"
             type="number"
+            onValueChange={(value) => {
+              // Ensure it's a number
+              form.setValue('guest_count', Number(value) || 1);
+            }}
           />
           
           <SelectField
@@ -167,7 +180,7 @@ export function CreateEventForm({ onSubmit, isSubmitting, onCancel }: CreateEven
             Cancel
           </Button>
           <Button type="submit" disabled={isSubmitting}>
-            {isSubmitting ? 'Creating...' : 'Create Event'}
+            {isSubmitting ? (initialValues ? 'Updating...' : 'Creating...') : (initialValues ? 'Update Event' : 'Create Event')}
           </Button>
         </div>
       </form>

@@ -109,6 +109,10 @@ const BookingFormFields: React.FC<BookingFormFieldsProps> = ({ form }) => {
           name="guest_count"
           label="Guest Count"
           type="number"
+          onValueChange={(value) => {
+            // Convert string to number for numeric fields
+            form.setValue('guest_count', Number(value) || 0);
+          }}
         />
         
         <InputField
@@ -117,6 +121,10 @@ const BookingFormFields: React.FC<BookingFormFieldsProps> = ({ form }) => {
           label="Total Amount"
           type="number"
           placeholder="0.00"
+          onValueChange={(value) => {
+            // Convert string to number for numeric fields
+            form.setValue('total_amount', Number(value) || 0);
+          }}
         />
         
         <InputField
@@ -125,6 +133,10 @@ const BookingFormFields: React.FC<BookingFormFieldsProps> = ({ form }) => {
           label="Deposit Amount"
           type="number"
           placeholder="0.00"
+          onValueChange={(value) => {
+            // Convert string to number for numeric fields
+            form.setValue('deposit_amount', Number(value) || 0);
+          }}
         />
       </div>
 

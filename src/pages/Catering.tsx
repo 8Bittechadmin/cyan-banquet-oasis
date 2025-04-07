@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import AppLayout from '@/components/AppLayout';
 import PageHeader from '@/components/PageHeader';
@@ -6,34 +7,70 @@ import { Button } from '@/components/ui/button';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
-import { Calendar, ChevronRight, Plus, FileText, Utensils } from 'lucide-react';
+import { Calendar, ChevronRight, Plus, FileText, Utensils, Edit } from 'lucide-react';
 import CreateMenuItemModal from '@/components/Catering/CreateMenuItemModal';
+import CreateCategoryModal from '@/components/Catering/CreateCategoryModal';
+import EditCategoryModal from '@/components/Catering/EditCategoryModal';
+import CreateSpecialModal from '@/components/Catering/CreateSpecialModal';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 
 const Catering: React.FC = () => {
   const [isCreateMenuModalOpen, setIsCreateMenuModalOpen] = useState(false);
+  const [isCreateCategoryModalOpen, setIsCreateCategoryModalOpen] = useState(false);
+  const [isEditCategoryModalOpen, setIsEditCategoryModalOpen] = useState(false);
+  const [isCreateSpecialModalOpen, setIsCreateSpecialModalOpen] = useState(false);
+  const [selectedCategory, setSelectedCategory] = useState<any>(null);
   
-  // Mock menu categories
-  const menuCategories = [
-    { name: 'Breakfast', count: 12 },
-    { name: 'Lunch', count: 18 },
-    { name: 'Dinner', count: 24 },
-    { name: 'Reception', count: 15 },
-    { name: 'Buffet', count: 20 },
-    { name: 'Plated', count: 16 },
-    { name: 'Desserts', count: 14 },
-    { name: 'Beverages', count: 10 }
-  ];
+  // Fetch menu categories from database
+  const { data: menuCategories = [], isLoading: loadingCategories } = useQuery({
+    queryKey: ['menuCategories'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('menu_categories')
+        .select('*')
+        .order('name');
+      
+      if (error) throw error;
+      return data || [];
+    },
+  });
   
-  // Mock popular menu items
-  const popularMenuItems = [
-    { name: 'Beef Wellington', category: 'Dinner', price: 42, dietaryInfo: ['Contains Gluten', 'Contains Dairy'] },
-    { name: 'Vegetable Risotto', category: 'Dinner', price: 28, dietaryInfo: ['Vegetarian', 'Gluten-Free Option'] },
-    { name: 'Smoked Salmon Canapé', category: 'Reception', price: 14, dietaryInfo: ['Contains Fish'] },
-    { name: 'Chocolate Lava Cake', category: 'Desserts', price: 12, dietaryInfo: ['Vegetarian', 'Contains Dairy', 'Contains Gluten'] },
-    { name: 'Garden Salad', category: 'Lunch', price: 10, dietaryInfo: ['Vegan', 'Gluten-Free'] }
-  ];
+  // Fetch popular menu items with category details
+  const { data: menuItems = [], isLoading: loadingMenuItems } = useQuery({
+    queryKey: ['menuItems'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('menu_items')
+        .select(`
+          *,
+          categories:category_id (name)
+        `)
+        .order('created_at', { ascending: false })
+        .limit(5);
+      
+      if (error) throw error;
+      return data || [];
+    },
+  });
+  
+  // Fetch special menu items
+  const { data: specialItems = [], isLoading: loadingSpecials } = useQuery({
+    queryKey: ['specialMenuItems'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('menu_items')
+        .select(`
+          *,
+          categories:category_id (name)
+        `)
+        .eq('is_special', true)
+        .order('created_at', { ascending: false });
+      
+      if (error) throw error;
+      return data || [];
+    },
+  });
   
   // Mock upcoming catering orders
   const upcomingOrders = [
@@ -65,6 +102,11 @@ const Catering: React.FC = () => {
       specialRequests: 'Nut-free desserts'
     }
   ];
+  
+  const handleEditCategory = (category: any) => {
+    setSelectedCategory(category);
+    setIsEditCategoryModalOpen(true);
+  };
   
   const getStatusColor = (status: string) => {
     switch(status) {
@@ -101,24 +143,47 @@ const Catering: React.FC = () => {
                 <CardDescription>Browse menu options by category</CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="grid grid-cols-2 gap-2">
-                  {menuCategories.map((category, index) => (
+                {loadingCategories ? (
+                  <div className="text-center py-8">
+                    <p>Loading categories...</p>
+                  </div>
+                ) : menuCategories.length > 0 ? (
+                  <div className="grid grid-cols-2 gap-2">
+                    {menuCategories.map((category) => (
+                      <Button 
+                        key={category.id} 
+                        variant="outline" 
+                        className="justify-start h-auto py-3 relative group"
+                        onClick={() => handleEditCategory(category)}
+                      >
+                        <Utensils className="h-4 w-4 mr-2 text-cyan-600" />
+                        <div className="flex flex-col items-start">
+                          <span>{category.name}</span>
+                          <span className="text-xs text-muted-foreground">Edit category</span>
+                        </div>
+                        <Edit className="h-4 w-4 absolute right-2 opacity-0 group-hover:opacity-100 transition-opacity" />
+                      </Button>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-8">
+                    <p>No categories found</p>
                     <Button 
-                      key={index} 
                       variant="outline" 
-                      className="justify-start h-auto py-3"
+                      className="mt-4"
+                      onClick={() => setIsCreateCategoryModalOpen(true)}
                     >
-                      <Utensils className="h-4 w-4 mr-2 text-cyan-600" />
-                      <div className="flex flex-col items-start">
-                        <span>{category.name}</span>
-                        <span className="text-xs text-muted-foreground">{category.count} items</span>
-                      </div>
+                      <Plus className="h-4 w-4 mr-2" /> Add Category
                     </Button>
-                  ))}
-                </div>
+                  </div>
+                )}
               </CardContent>
               <CardFooter>
-                <Button variant="outline" className="w-full">
+                <Button 
+                  variant="outline" 
+                  className="w-full"
+                  onClick={() => setIsCreateCategoryModalOpen(true)}
+                >
                   <Plus className="h-4 w-4 mr-2" /> Add New Category
                 </Button>
               </CardFooter>
@@ -130,25 +195,46 @@ const Catering: React.FC = () => {
                 <CardDescription>Most requested catering selections</CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="space-y-4">
-                  {popularMenuItems.map((item, index) => (
-                    <div key={index} className="flex justify-between items-start pb-3 last:pb-0 last:border-0 border-b border-gray-100">
-                      <div>
-                        <h4 className="font-medium text-sm">{item.name}</h4>
-                        <div className="text-xs text-muted-foreground">{item.category}</div>
-                        <div className="flex gap-1 mt-1 flex-wrap">
-                          {item.dietaryInfo.map((info, i) => (
-                            <Badge key={i} variant="outline" className="text-xs">{info}</Badge>
-                          ))}
+                {loadingMenuItems ? (
+                  <div className="text-center py-8">
+                    <p>Loading menu items...</p>
+                  </div>
+                ) : menuItems.length > 0 ? (
+                  <div className="space-y-4">
+                    {menuItems.map((item) => (
+                      <div key={item.id} className="flex justify-between items-start pb-3 last:pb-0 last:border-0 border-b border-gray-100">
+                        <div>
+                          <h4 className="font-medium text-sm">{item.name}</h4>
+                          <div className="text-xs text-muted-foreground">{item.categories?.name || 'Uncategorized'}</div>
+                          <div className="flex gap-1 mt-1 flex-wrap">
+                            {item.ingredients && item.ingredients.map((info: string, i: number) => (
+                              <Badge key={i} variant="outline" className="text-xs">{info}</Badge>
+                            ))}
+                          </div>
                         </div>
+                        <div className="text-sm font-semibold">${item.price}</div>
                       </div>
-                      <div className="text-sm font-semibold">${item.price}</div>
-                    </div>
-                  ))}
-                </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-8">
+                    <p>No menu items found</p>
+                    <Button 
+                      className="mt-4"
+                      onClick={() => setIsCreateMenuModalOpen(true)}
+                    >
+                      Create Menu Item
+                    </Button>
+                  </div>
+                )}
               </CardContent>
               <CardFooter>
-                <Button className="w-full">View All Menu Items</Button>
+                <Button 
+                  className="w-full"
+                  onClick={() => setIsCreateMenuModalOpen(true)}
+                >
+                  View All Menu Items
+                </Button>
               </CardFooter>
             </Card>
           </div>
@@ -160,18 +246,42 @@ const Catering: React.FC = () => {
                   <CardTitle>Seasonal Specials</CardTitle>
                   <CardDescription>Limited time menu offerings</CardDescription>
                 </div>
-                <Button size="sm">
+                <Button 
+                  size="sm"
+                  onClick={() => setIsCreateSpecialModalOpen(true)}
+                >
                   <Plus className="h-4 w-4 mr-2" /> 
                   Add Special
                 </Button>
               </div>
             </CardHeader>
             <CardContent>
-              <div className="bg-gray-50 rounded-md p-8 text-center">
-                <h3 className="text-lg font-medium mb-1">Spring Collection</h3>
-                <p className="text-muted-foreground mb-4">Available April - June</p>
-                <Button>Browse Spring Menus</Button>
-              </div>
+              {loadingSpecials ? (
+                <div className="text-center py-8">
+                  <p>Loading special menu items...</p>
+                </div>
+              ) : specialItems.length > 0 ? (
+                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                  {specialItems.map((item) => (
+                    <div key={item.id} className="border rounded-md p-4">
+                      <h4 className="font-medium">{item.name}</h4>
+                      <p className="text-sm text-muted-foreground mt-1">{item.description}</p>
+                      <div className="mt-2">
+                        <Badge className="bg-cyan-100 text-cyan-800">{item.categories?.name || 'Uncategorized'}</Badge>
+                      </div>
+                      <div className="mt-2 font-semibold">${item.price}</div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="bg-gray-50 rounded-md p-8 text-center">
+                  <h3 className="text-lg font-medium mb-1">Spring Collection</h3>
+                  <p className="text-muted-foreground mb-4">Available April - June</p>
+                  <Button onClick={() => setIsCreateSpecialModalOpen(true)}>
+                    Add First Special
+                  </Button>
+                </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
@@ -245,6 +355,22 @@ const Catering: React.FC = () => {
       <CreateMenuItemModal
         open={isCreateMenuModalOpen}
         onOpenChange={setIsCreateMenuModalOpen}
+      />
+
+      <CreateCategoryModal
+        open={isCreateCategoryModalOpen}
+        onOpenChange={setIsCreateCategoryModalOpen}
+      />
+      
+      <EditCategoryModal
+        open={isEditCategoryModalOpen}
+        onOpenChange={setIsEditCategoryModalOpen}
+        category={selectedCategory}
+      />
+
+      <CreateSpecialModal
+        open={isCreateSpecialModalOpen}
+        onOpenChange={setIsCreateSpecialModalOpen}
       />
     </AppLayout>
   );
