@@ -22,11 +22,12 @@ const VenueForm: React.FC<VenueFormProps> = ({
   defaultValues = {
     name: '',
     capacity: 1,
-    sqFt: 1,
-    hourlyRate: 1,
+    square_footage: 1,
+    hourly_rate: 1,
     description: '',
     availability: 'available',
-    image: 'https://images.unsplash.com/photo-1519167758481-83f550bb49b3?q=80&w=500&auto=format&fit=crop',
+    image_url: 'https://images.unsplash.com/photo-1519167758481-83f550bb49b3?q=80&w=500&auto=format&fit=crop',
+    features: [],
   },
 }) => {
   const form = useForm<VenueFormValues>({
@@ -55,7 +56,7 @@ const VenueForm: React.FC<VenueFormProps> = ({
           
           <InputField
             form={form}
-            name="sqFt"
+            name="square_footage"
             label="Square Footage"
             type="number"
             placeholder="Enter square footage"
@@ -64,7 +65,7 @@ const VenueForm: React.FC<VenueFormProps> = ({
         
         <InputField
           form={form}
-          name="hourlyRate"
+          name="hourly_rate"
           label="Hourly Rate"
           type="number"
           placeholder="Enter hourly rate"
@@ -79,7 +80,7 @@ const VenueForm: React.FC<VenueFormProps> = ({
         
         <InputField
           form={form}
-          name="image"
+          name="image_url"
           label="Image URL"
           placeholder="Enter image URL"
         />
