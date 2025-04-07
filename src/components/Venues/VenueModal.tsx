@@ -10,6 +10,8 @@ import {
 import { toast } from '@/hooks/use-toast';
 import VenueForm from './VenueForm';
 import { VenueFormValues } from './VenueFormSchema';
+import { supabase } from '@/integrations/supabase/client';
+import { useQueryClient } from '@tanstack/react-query';
 
 interface VenueModalProps {
   open: boolean;
@@ -18,21 +20,37 @@ interface VenueModalProps {
 
 export const VenueModal: React.FC<VenueModalProps> = ({ open, onOpenChange }) => {
   const [isSubmitting, setIsSubmitting] = React.useState(false);
+  const queryClient = useQueryClient();
 
   const handleSubmit = async (values: VenueFormValues) => {
     setIsSubmitting(true);
     
     try {
-      // Here would be the API call to add the venue to your database
-      console.log('Venue data submitted:', values);
+      // Insert the venue into the database
+      const { data, error } = await supabase
+        .from('venues')
+        .insert({
+          name: values.name,
+          description: values.description,
+          capacity: values.capacity,
+          square_footage: values.square_footage,
+          hourly_rate: values.hourly_rate,
+          availability: values.availability,
+          image_url: values.image_url,
+          features: values.features
+        })
+        .select()
+        .single();
       
-      // Simulate an API delay
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      if (error) throw error;
       
       toast({
         title: 'Venue Added',
         description: `${values.name} has been added successfully.`,
       });
+      
+      // Invalidate the venues query to refetch data
+      queryClient.invalidateQueries({ queryKey: ['venues'] });
       
       onOpenChange(false);
     } catch (error) {

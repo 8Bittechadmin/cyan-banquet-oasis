@@ -11,6 +11,7 @@ import VenueModal from '@/components/Venues/VenueModal';
 import VenueDetailsDialog from '@/components/Venues/VenueDetailsDialog';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { toast } from '@/hooks/use-toast';
 
 const Venues: React.FC = () => {
   const [isAddVenueModalOpen, setIsAddVenueModalOpen] = useState(false);
@@ -18,7 +19,7 @@ const Venues: React.FC = () => {
   const [selectedVenueId, setSelectedVenueId] = useState<string | null>(null);
   const [isDetailsDialogOpen, setIsDetailsDialogOpen] = useState(false);
   
-  const { data: venues = [] } = useQuery({
+  const { data: venues = [], isLoading, error } = useQuery({
     queryKey: ['venues'],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -30,6 +31,15 @@ const Venues: React.FC = () => {
       return data || [];
     },
   });
+  
+  if (error) {
+    console.error('Error loading venues:', error);
+    toast({
+      title: 'Error loading venues',
+      description: 'There was a problem loading the venues. Please try again later.',
+      variant: 'destructive',
+    });
+  }
   
   const handleViewDetails = (venueId: string) => {
     setSelectedVenueId(venueId);
@@ -79,53 +89,68 @@ const Venues: React.FC = () => {
         </div>
         
         <TabsContent value="grid" className="m-0">
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {venues.map(venue => (
-              <Card key={venue.id} className="overflow-hidden">
-                <div className="aspect-video w-full overflow-hidden">
-                  <img 
-                    src={venue.image_url || 'https://images.unsplash.com/photo-1519167758481-83f550bb49b3?q=80&w=500&auto=format&fit=crop'} 
-                    alt={venue.name} 
-                    className="h-full w-full object-cover transition-transform hover:scale-105"
-                  />
-                </div>
-                <CardHeader className="pb-2">
-                  <div className="flex justify-between">
-                    <CardTitle>{venue.name}</CardTitle>
-                    <Badge className={getAvailabilityColor(venue.availability)}>
-                      {getAvailabilityLabel(venue.availability)}
-                    </Badge>
+          {isLoading ? (
+            <div className="flex justify-center items-center h-64">
+              <p className="text-muted-foreground">Loading venues...</p>
+            </div>
+          ) : venues.length === 0 ? (
+            <div className="text-center py-12 border rounded-md bg-muted/20">
+              <h3 className="text-lg font-medium text-muted-foreground">No venues found</h3>
+              <p className="text-sm text-muted-foreground mt-1">Add a new venue to get started</p>
+              <Button onClick={() => setIsAddVenueModalOpen(true)} className="mt-4">
+                <Plus size={16} className="mr-2" />
+                Add Venue
+              </Button>
+            </div>
+          ) : (
+            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+              {venues.map(venue => (
+                <Card key={venue.id} className="overflow-hidden">
+                  <div className="aspect-video w-full overflow-hidden">
+                    <img 
+                      src={venue.image_url || 'https://images.unsplash.com/photo-1519167758481-83f550bb49b3?q=80&w=500&auto=format&fit=crop'} 
+                      alt={venue.name} 
+                      className="h-full w-full object-cover transition-transform hover:scale-105"
+                    />
                   </div>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-sm text-muted-foreground mb-4">{venue.description}</p>
-                  <div className="grid grid-cols-2 gap-2 text-sm">
-                    <div className="flex items-center gap-1">
-                      <Users className="h-4 w-4 text-gray-500" />
-                      <span>Capacity: {venue.capacity}</span>
+                  <CardHeader className="pb-2">
+                    <div className="flex justify-between">
+                      <CardTitle>{venue.name}</CardTitle>
+                      <Badge className={getAvailabilityColor(venue.availability || 'available')}>
+                        {getAvailabilityLabel(venue.availability || 'available')}
+                      </Badge>
                     </div>
-                    <div className="flex items-center gap-1">
-                      <Square className="h-4 w-4 text-gray-500" />
-                      <span>{venue.square_footage} sq ft</span>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-sm text-muted-foreground mb-4">{venue.description}</p>
+                    <div className="grid grid-cols-2 gap-2 text-sm">
+                      <div className="flex items-center gap-1">
+                        <Users className="h-4 w-4 text-gray-500" />
+                        <span>Capacity: {venue.capacity}</span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <Square className="h-4 w-4 text-gray-500" />
+                        <span>{venue.square_footage} sq ft</span>
+                      </div>
+                      <div className="flex items-center gap-1 col-span-2">
+                        <Clock className="h-4 w-4 text-gray-500" />
+                        <span>${venue.hourly_rate}/hour</span>
+                      </div>
                     </div>
-                    <div className="flex items-center gap-1 col-span-2">
-                      <Clock className="h-4 w-4 text-gray-500" />
-                      <span>${venue.hourly_rate}/hour</span>
-                    </div>
-                  </div>
-                </CardContent>
-                <CardFooter className="pt-0">
-                  <Button 
-                    variant="outline" 
-                    className="w-full"
-                    onClick={() => handleViewDetails(venue.id)}
-                  >
-                    View Details
-                  </Button>
-                </CardFooter>
-              </Card>
-            ))}
-          </div>
+                  </CardContent>
+                  <CardFooter className="pt-0">
+                    <Button 
+                      variant="outline" 
+                      className="w-full"
+                      onClick={() => handleViewDetails(venue.id)}
+                    >
+                      View Details
+                    </Button>
+                  </CardFooter>
+                </Card>
+              ))}
+            </div>
+          )}
         </TabsContent>
         
         <TabsContent value="calendar" className="m-0">
