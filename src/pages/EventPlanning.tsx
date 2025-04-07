@@ -1,5 +1,4 @@
-
-import React from 'react';
+import React, { useState } from 'react';
 import AppLayout from '@/components/AppLayout';
 import PageHeader from '@/components/PageHeader';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -9,8 +8,13 @@ import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Calendar, Clipboard, Check, X, Search, Filter, ChevronRight } from 'lucide-react';
+import CreateEventModal from '@/components/EventPlanning/CreateEventModal';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
 
 const EventPlanning: React.FC = () => {
+  const [isCreateEventModalOpen, setIsCreateEventModalOpen] = useState(false);
+  
   // Mock event data
   const upcomingEvents = [
     {
@@ -94,7 +98,7 @@ const EventPlanning: React.FC = () => {
         action={{
           label: "Create Event",
           icon: <Calendar size={16} />,
-          onClick: () => console.log("Create new event")
+          onClick: () => setIsCreateEventModalOpen(true)
         }}
       />
       
@@ -240,6 +244,11 @@ const EventPlanning: React.FC = () => {
           </div>
         </TabsContent>
       </Tabs>
+      
+      <CreateEventModal
+        open={isCreateEventModalOpen}
+        onOpenChange={setIsCreateEventModalOpen}
+      />
     </AppLayout>
   );
 };

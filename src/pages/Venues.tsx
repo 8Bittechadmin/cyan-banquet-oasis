@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import AppLayout from '@/components/AppLayout';
 import PageHeader from '@/components/PageHeader';
@@ -7,73 +8,33 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Calendar, Plus, Users, Square, Clock } from 'lucide-react';
 import VenueModal from '@/components/Venues/VenueModal';
+import VenueDetailsDialog from '@/components/Venues/VenueDetailsDialog';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
 
 const Venues: React.FC = () => {
   const [isAddVenueModalOpen, setIsAddVenueModalOpen] = useState(false);
   const [isAvailabilityModalOpen, setIsAvailabilityModalOpen] = useState(false);
+  const [selectedVenueId, setSelectedVenueId] = useState<string | null>(null);
+  const [isDetailsDialogOpen, setIsDetailsDialogOpen] = useState(false);
   
-  const venues = [
-    {
-      id: 'V001',
-      name: 'Grand Ballroom',
-      capacity: 300,
-      sqFt: 4500,
-      hourlyRate: 800,
-      availability: 'available',
-      image: 'https://images.unsplash.com/photo-1519167758481-83f550bb49b3?q=80&w=500&auto=format&fit=crop',
-      description: 'Our largest and most luxurious venue, perfect for weddings and galas.'
+  const { data: venues = [] } = useQuery({
+    queryKey: ['venues'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('venues')
+        .select('*')
+        .order('name');
+      
+      if (error) throw error;
+      return data || [];
     },
-    {
-      id: 'V002',
-      name: 'Garden Pavilion',
-      capacity: 150,
-      sqFt: 2500,
-      hourlyRate: 600,
-      availability: 'booked',
-      image: 'https://images.unsplash.com/photo-1464366400600-7168b8af9bc3?q=80&w=500&auto=format&fit=crop',
-      description: 'An elegant outdoor venue with stunning garden views and weather protection.'
-    },
-    {
-      id: 'V003',
-      name: 'Executive Conference Room',
-      capacity: 50,
-      sqFt: 1200,
-      hourlyRate: 350,
-      availability: 'maintenance',
-      image: 'https://images.unsplash.com/photo-1517457373958-b7bdd4587205?q=80&w=500&auto=format&fit=crop',
-      description: 'Professional setting with state-of-the-art AV equipment for business meetings.'
-    },
-    {
-      id: 'V004',
-      name: 'Terrace Hall',
-      capacity: 120,
-      sqFt: 1800,
-      hourlyRate: 500,
-      availability: 'available',
-      image: 'https://images.unsplash.com/photo-1606744888344-493238951221?q=80&w=500&auto=format&fit=crop',
-      description: 'Beautiful indoor-outdoor space with a retractable roof and city views.'
-    },
-    {
-      id: 'V005',
-      name: 'Lakeside Room',
-      capacity: 80,
-      sqFt: 1500,
-      hourlyRate: 450,
-      availability: 'available',
-      image: 'https://images.unsplash.com/photo-1505236858219-8359eb29e329?q=80&w=500&auto=format&fit=crop',
-      description: 'Intimate setting with floor-to-ceiling windows overlooking our private lake.'
-    },
-    {
-      id: 'V006',
-      name: 'Banquet Hall B',
-      capacity: 200,
-      sqFt: 3000,
-      hourlyRate: 650,
-      availability: 'booked',
-      image: 'https://images.unsplash.com/photo-1562664377-709f2c337eb2?q=80&w=500&auto=format&fit=crop',
-      description: 'Versatile space suitable for medium to large events and conferences.'
-    }
-  ];
+  });
+  
+  const handleViewDetails = (venueId: string) => {
+    setSelectedVenueId(venueId);
+    setIsDetailsDialogOpen(true);
+  };
   
   const getAvailabilityColor = (availability: string) => {
     switch(availability) {
@@ -123,7 +84,7 @@ const Venues: React.FC = () => {
               <Card key={venue.id} className="overflow-hidden">
                 <div className="aspect-video w-full overflow-hidden">
                   <img 
-                    src={venue.image} 
+                    src={venue.image_url || 'https://images.unsplash.com/photo-1519167758481-83f550bb49b3?q=80&w=500&auto=format&fit=crop'} 
                     alt={venue.name} 
                     className="h-full w-full object-cover transition-transform hover:scale-105"
                   />
@@ -145,16 +106,22 @@ const Venues: React.FC = () => {
                     </div>
                     <div className="flex items-center gap-1">
                       <Square className="h-4 w-4 text-gray-500" />
-                      <span>{venue.sqFt} sq ft</span>
+                      <span>{venue.square_footage} sq ft</span>
                     </div>
                     <div className="flex items-center gap-1 col-span-2">
                       <Clock className="h-4 w-4 text-gray-500" />
-                      <span>${venue.hourlyRate}/hour</span>
+                      <span>${venue.hourly_rate}/hour</span>
                     </div>
                   </div>
                 </CardContent>
                 <CardFooter className="pt-0">
-                  <Button variant="outline" className="w-full">View Details</Button>
+                  <Button 
+                    variant="outline" 
+                    className="w-full"
+                    onClick={() => handleViewDetails(venue.id)}
+                  >
+                    View Details
+                  </Button>
                 </CardFooter>
               </Card>
             ))}
@@ -177,6 +144,14 @@ const Venues: React.FC = () => {
         open={isAddVenueModalOpen}
         onOpenChange={setIsAddVenueModalOpen}
       />
+      
+      {selectedVenueId && (
+        <VenueDetailsDialog
+          venueId={selectedVenueId}
+          open={isDetailsDialogOpen}
+          onOpenChange={setIsDetailsDialogOpen}
+        />
+      )}
     </AppLayout>
   );
 };

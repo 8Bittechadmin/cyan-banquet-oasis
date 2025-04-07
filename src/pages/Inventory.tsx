@@ -1,4 +1,5 @@
-import React from 'react';
+
+import React, { useState } from 'react';
 import AppLayout from '@/components/AppLayout';
 import PageHeader from '@/components/PageHeader';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -8,65 +9,27 @@ import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Search, Plus, Filter, AlertTriangle } from 'lucide-react';
+import AddInventoryItemModal from '@/components/Inventory/AddInventoryItemModal';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
 
 const Inventory: React.FC = () => {
-  // Mock inventory data
-  const inventoryItems = [
-    {
-      id: 'INV001',
-      name: 'Round Tables',
-      category: 'Furniture',
-      total: 50,
-      available: 32,
-      inUse: 18,
-      status: 'available'
+  const [isAddItemModalOpen, setIsAddItemModalOpen] = useState(false);
+  const [activeCategory, setActiveCategory] = useState('all');
+  const [searchQuery, setSearchQuery] = useState('');
+  
+  const { data: inventoryItems, isLoading } = useQuery({
+    queryKey: ['inventory'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('inventory')
+        .select('*')
+        .order('created_at', { ascending: false });
+      
+      if (error) throw error;
+      return data || [];
     },
-    {
-      id: 'INV002',
-      name: 'Chiavari Chairs',
-      category: 'Furniture',
-      total: 200,
-      available: 120,
-      inUse: 80,
-      status: 'available'
-    },
-    {
-      id: 'INV003',
-      name: 'Table Linens (White)',
-      category: 'Linens',
-      total: 60,
-      available: 15,
-      inUse: 45,
-      status: 'low'
-    },
-    {
-      id: 'INV004',
-      name: 'Wireless Microphones',
-      category: 'AV Equipment',
-      total: 8,
-      available: 2,
-      inUse: 6,
-      status: 'low'
-    },
-    {
-      id: 'INV005',
-      name: 'LED Uplights',
-      category: 'Lighting',
-      total: 24,
-      available: 10,
-      inUse: 14,
-      status: 'available'
-    },
-    {
-      id: 'INV006',
-      name: 'Champagne Flutes',
-      category: 'Glassware',
-      total: 300,
-      available: 0,
-      inUse: 300,
-      status: 'out'
-    }
-  ];
+  });
   
   // Categories for quick filtering
   const categories = [
@@ -78,23 +41,39 @@ const Inventory: React.FC = () => {
     { name: 'Decor', value: 'decor' }
   ];
   
+  // Filter items by category and search query
+  const filteredItems = (inventoryItems || []).filter(item => {
+    const matchesCategory = activeCategory === 'all' || item.category === activeCategory;
+    const matchesSearch = searchQuery === '' || 
+      item.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
+      item.category.toLowerCase().includes(searchQuery.toLowerCase());
+    return matchesCategory && matchesSearch;
+  });
+  
   const getStatusColor = (status: string) => {
     switch(status) {
-      case 'available': return 'bg-green-100 text-green-800 hover:bg-green-200';
+      case 'in-stock': return 'bg-green-100 text-green-800 hover:bg-green-200';
       case 'low': return 'bg-yellow-100 text-yellow-800 hover:bg-yellow-200';
       case 'out': return 'bg-red-100 text-red-800 hover:bg-red-200';
+      case 'on-order': return 'bg-blue-100 text-blue-800 hover:bg-blue-200';
       default: return 'bg-gray-100 text-gray-800 hover:bg-gray-200';
     }
   };
   
   const getStatusLabel = (status: string) => {
     switch(status) {
-      case 'available': return 'Available';
+      case 'in-stock': return 'In Stock';
       case 'low': return 'Low Stock';
       case 'out': return 'Out of Stock';
+      case 'on-order': return 'On Order';
       default: return status.charAt(0).toUpperCase() + status.slice(1);
     }
   };
+  
+  // Calculate statistics
+  const totalItems = inventoryItems?.length || 0;
+  const itemsInUse = inventoryItems?.filter(item => item.quantity < item.min_quantity).length || 0;
+  const lowStockAlerts = inventoryItems?.filter(item => item.status === 'low').length || 0;
   
   return (
     <AppLayout>
@@ -104,7 +83,7 @@ const Inventory: React.FC = () => {
         action={{
           label: "Add Item",
           icon: <Plus size={16} />,
-          onClick: () => console.log("Add new inventory item")
+          onClick: () => setIsAddItemModalOpen(true)
         }}
       />
       
@@ -114,8 +93,8 @@ const Inventory: React.FC = () => {
             <CardTitle className="text-sm font-medium">Total Items</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">642</div>
-            <p className="text-xs text-muted-foreground mt-1">6 categories</p>
+            <div className="text-2xl font-bold">{totalItems}</div>
+            <p className="text-xs text-muted-foreground mt-1">{categories.length - 1} categories</p>
           </CardContent>
         </Card>
         <Card>
@@ -123,8 +102,8 @@ const Inventory: React.FC = () => {
             <CardTitle className="text-sm font-medium">Items In Use</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">218</div>
-            <p className="text-xs text-muted-foreground mt-1">34% of inventory</p>
+            <div className="text-2xl font-bold">{itemsInUse}</div>
+            <p className="text-xs text-muted-foreground mt-1">{Math.round((itemsInUse / totalItems) * 100) || 0}% of inventory</p>
           </CardContent>
         </Card>
         <Card>
@@ -133,7 +112,7 @@ const Inventory: React.FC = () => {
           </CardHeader>
           <CardContent>
             <div className="flex items-center">
-              <div className="text-2xl font-bold">8</div>
+              <div className="text-2xl font-bold">{lowStockAlerts}</div>
               <Badge variant="outline" className="ml-2 bg-yellow-50 text-yellow-600 border-yellow-200">
                 <AlertTriangle className="h-3 w-3 mr-1" /> Attention Needed
               </Badge>
@@ -144,7 +123,7 @@ const Inventory: React.FC = () => {
       </div>
       
       <div className="mb-6">
-        <Tabs defaultValue="all" className="w-full">
+        <Tabs defaultValue="all" value={activeCategory} onValueChange={setActiveCategory} className="w-full">
           <TabsList className="flex flex-wrap h-auto gap-2 bg-transparent p-0 mb-4">
             {categories.map(category => (
               <TabsTrigger 
@@ -162,7 +141,9 @@ const Inventory: React.FC = () => {
               <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-500" />
               <Input 
                 placeholder="Search inventory..." 
-                className="w-full pl-9" 
+                className="w-full pl-9"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
               />
             </div>
             <Button variant="outline" className="flex gap-2">
@@ -171,46 +152,57 @@ const Inventory: React.FC = () => {
             </Button>
           </div>
           
-          <TabsContent value="all" className="m-0">
+          <TabsContent value={activeCategory} className="m-0">
             <Card>
               <CardContent className="p-0">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>ID</TableHead>
-                      <TableHead>Item Name</TableHead>
-                      <TableHead className="hidden md:table-cell">Category</TableHead>
-                      <TableHead className="text-center">Total</TableHead>
-                      <TableHead className="text-center hidden sm:table-cell">Available</TableHead>
-                      <TableHead className="text-center hidden lg:table-cell">In Use</TableHead>
-                      <TableHead>Status</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {inventoryItems.map(item => (
-                      <TableRow key={item.id} className="cursor-pointer hover:bg-gray-50">
-                        <TableCell className="font-medium">{item.id}</TableCell>
-                        <TableCell>{item.name}</TableCell>
-                        <TableCell className="hidden md:table-cell">{item.category}</TableCell>
-                        <TableCell className="text-center">{item.total}</TableCell>
-                        <TableCell className="text-center hidden sm:table-cell">{item.available}</TableCell>
-                        <TableCell className="text-center hidden lg:table-cell">{item.inUse}</TableCell>
-                        <TableCell>
-                          <Badge className={getStatusColor(item.status)}>
-                            {getStatusLabel(item.status)}
-                          </Badge>
-                        </TableCell>
+                {isLoading ? (
+                  <div className="p-8 text-center text-gray-500">Loading inventory items...</div>
+                ) : filteredItems.length === 0 ? (
+                  <div className="p-8 text-center text-gray-500">
+                    {searchQuery ? "No items match your search criteria." : "No inventory items found."}
+                  </div>
+                ) : (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>ID</TableHead>
+                        <TableHead>Item Name</TableHead>
+                        <TableHead className="hidden md:table-cell">Category</TableHead>
+                        <TableHead className="text-center">Total</TableHead>
+                        <TableHead className="text-center hidden sm:table-cell">Min Quantity</TableHead>
+                        <TableHead className="hidden lg:table-cell">Unit</TableHead>
+                        <TableHead>Status</TableHead>
                       </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+                    </TableHeader>
+                    <TableBody>
+                      {filteredItems.map(item => (
+                        <TableRow key={item.id} className="cursor-pointer hover:bg-gray-50">
+                          <TableCell className="font-medium">{item.id.substring(0, 8)}</TableCell>
+                          <TableCell>{item.name}</TableCell>
+                          <TableCell className="hidden md:table-cell">{item.category}</TableCell>
+                          <TableCell className="text-center">{item.quantity}</TableCell>
+                          <TableCell className="text-center hidden sm:table-cell">{item.min_quantity}</TableCell>
+                          <TableCell className="hidden lg:table-cell">{item.unit || '-'}</TableCell>
+                          <TableCell>
+                            <Badge className={getStatusColor(item.status)}>
+                              {getStatusLabel(item.status)}
+                            </Badge>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                )}
               </CardContent>
             </Card>
           </TabsContent>
-          
-          {/* Other tabs content would be similar, filtered by category */}
         </Tabs>
       </div>
+      
+      <AddInventoryItemModal
+        open={isAddItemModalOpen}
+        onOpenChange={setIsAddItemModalOpen}
+      />
     </AppLayout>
   );
 };

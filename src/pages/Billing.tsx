@@ -1,5 +1,4 @@
-
-import React from 'react';
+import React, { useState } from 'react';
 import AppLayout from '@/components/AppLayout';
 import PageHeader from '@/components/PageHeader';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
@@ -9,8 +8,13 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Search, FileText, Download, Plus, Filter, DollarSign, ArrowUpRight, CreditCard, AlertCircle } from 'lucide-react';
 import { Input } from '@/components/ui/input';
+import CreateInvoiceModal from '@/components/Billing/CreateInvoiceModal';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
 
 const Billing: React.FC = () => {
+  const [isCreateInvoiceModalOpen, setIsCreateInvoiceModalOpen] = useState(false);
+  
   // Mock invoices data
   const invoices = [
     {
@@ -84,7 +88,7 @@ const Billing: React.FC = () => {
         action={{
           label: "New Invoice",
           icon: <FileText size={16} />,
-          onClick: () => console.log("Create new invoice")
+          onClick: () => setIsCreateInvoiceModalOpen(true)
         }}
       />
       
@@ -337,6 +341,11 @@ const Billing: React.FC = () => {
           </div>
         </TabsContent>
       </Tabs>
+      
+      <CreateInvoiceModal
+        open={isCreateInvoiceModalOpen}
+        onOpenChange={setIsCreateInvoiceModalOpen}
+      />
     </AppLayout>
   );
 };

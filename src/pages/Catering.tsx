@@ -1,5 +1,4 @@
-
-import React from 'react';
+import React, { useState } from 'react';
 import AppLayout from '@/components/AppLayout';
 import PageHeader from '@/components/PageHeader';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
@@ -8,8 +7,13 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
 import { Calendar, ChevronRight, Plus, FileText, Utensils } from 'lucide-react';
+import CreateMenuItemModal from '@/components/Catering/CreateMenuItemModal';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
 
 const Catering: React.FC = () => {
+  const [isCreateMenuModalOpen, setIsCreateMenuModalOpen] = useState(false);
+  
   // Mock menu categories
   const menuCategories = [
     { name: 'Breakfast', count: 12 },
@@ -78,7 +82,7 @@ const Catering: React.FC = () => {
         action={{
           label: "Create Menu",
           icon: <FileText size={16} />,
-          onClick: () => console.log("Create new menu")
+          onClick: () => setIsCreateMenuModalOpen(true)
         }}
       />
       
@@ -237,6 +241,11 @@ const Catering: React.FC = () => {
           </div>
         </TabsContent>
       </Tabs>
+      
+      <CreateMenuItemModal
+        open={isCreateMenuModalOpen}
+        onOpenChange={setIsCreateMenuModalOpen}
+      />
     </AppLayout>
   );
 };

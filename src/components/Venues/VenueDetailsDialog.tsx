@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -8,20 +8,68 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
-import { DollarSign, Users, Maximize2, CalendarCheck } from 'lucide-react';
-import { Venue } from "@/integrations/supabase/client";
+import { DollarSign, Users, Maximize2, CalendarCheck, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
 
 interface VenueDetailsDialogProps {
-  venue: Venue | null;
+  venueId: string;
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
 
 const VenueDetailsDialog: React.FC<VenueDetailsDialogProps> = ({
-  venue,
+  venueId,
   open,
   onOpenChange
 }) => {
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  
+  const { data: venue, isLoading } = useQuery({
+    queryKey: ['venue', venueId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('venues')
+        .select('*')
+        .eq('id', venueId)
+        .single();
+      
+      if (error) throw error;
+      return data;
+    },
+    enabled: open && !!venueId,
+  });
+  
+  // Mock multiple images for the slider (in a real app, these would come from the venue)
+  const mockImages = [
+    venue?.image_url || 'https://images.unsplash.com/photo-1519167758481-83f550bb49b3?q=80&w=500&auto=format&fit=crop',
+    'https://images.unsplash.com/photo-1464366400600-7168b8af9bc3?q=80&w=500&auto=format&fit=crop',
+    'https://images.unsplash.com/photo-1517457373958-b7bdd4587205?q=80&w=500&auto=format&fit=crop',
+  ];
+  
+  const nextImage = () => {
+    setCurrentImageIndex((prevIndex) => 
+      prevIndex === mockImages.length - 1 ? 0 : prevIndex + 1
+    );
+  };
+  
+  const prevImage = () => {
+    setCurrentImageIndex((prevIndex) => 
+      prevIndex === 0 ? mockImages.length - 1 : prevIndex - 1
+    );
+  };
+
+  if (isLoading) {
+    return (
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent className="sm:max-w-[600px]">
+          <div className="py-8 text-center">Loading venue details...</div>
+        </DialogContent>
+      </Dialog>
+    );
+  }
+
   if (!venue) {
     return null;
   }
@@ -36,15 +84,48 @@ const VenueDetailsDialog: React.FC<VenueDetailsDialogProps> = ({
           </DialogDescription>
         </DialogHeader>
 
-        {venue.image_url && (
-          <div className="relative h-56 w-full overflow-hidden rounded-lg">
+        <div className="relative h-56 w-full overflow-hidden rounded-lg">
+          {/* Image slider */}
+          <div className="w-full h-full">
             <img
-              src={venue.image_url}
-              alt={venue.name}
+              src={mockImages[currentImageIndex]}
+              alt={`${venue.name} - Image ${currentImageIndex + 1}`}
               className="w-full h-full object-cover"
             />
           </div>
-        )}
+          
+          {/* Navigation buttons */}
+          <div className="absolute top-0 left-0 w-full h-full flex justify-between items-center">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="bg-black/30 hover:bg-black/50 text-white rounded-full h-8 w-8"
+              onClick={prevImage}
+            >
+              <ChevronLeft className="h-5 w-5" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="bg-black/30 hover:bg-black/50 text-white rounded-full h-8 w-8"
+              onClick={nextImage}
+            >
+              <ChevronRight className="h-5 w-5" />
+            </Button>
+          </div>
+          
+          {/* Image indicator dots */}
+          <div className="absolute bottom-2 left-0 right-0 flex justify-center space-x-2">
+            {mockImages.map((_, index) => (
+              <div
+                key={index}
+                className={`h-2 w-2 rounded-full ${
+                  currentImageIndex === index ? 'bg-white' : 'bg-white/50'
+                }`}
+              />
+            ))}
+          </div>
+        </div>
 
         <div className="space-y-4">
           <div className="flex flex-wrap gap-2 items-center">
@@ -65,7 +146,7 @@ const VenueDetailsDialog: React.FC<VenueDetailsDialogProps> = ({
               className="flex items-center"
             >
               <CalendarCheck className="mr-1 h-3 w-3" />
-              {venue.availability || 'Available'}
+              {venue.availability === 'available' ? 'Available' : venue.availability}
             </Badge>
           </div>
 
