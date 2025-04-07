@@ -8,6 +8,7 @@ import { Form } from '@/components/ui/form';
 import { InputField, SelectField, TextareaField, DateTimeField } from '@/components/Common/FormFields';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { Input } from '@/components/ui/input';
 
 const invoiceFormSchema = z.object({
   invoice_number: z.string().min(1, "Invoice number is required"),
@@ -22,7 +23,7 @@ const invoiceFormSchema = z.object({
 type InvoiceFormValues = z.infer<typeof invoiceFormSchema>;
 
 type CreateInvoiceFormProps = {
-  onSubmit: (values: InvoiceFormValues) => void;
+  onSubmit: (values: InvoiceFormValues & { total_amount: number }) => void;
   isSubmitting: boolean;
   onCancel: () => void;
 }
@@ -167,7 +168,7 @@ export function CreateInvoiceForm({ onSubmit, isSubmitting, onCancel }: CreateIn
               placeholder="0.00"
               type="number"
               step="0.01"
-              readOnly
+              readOnly={true}
             />
             
             <div className="space-y-2">
@@ -203,8 +204,5 @@ export function CreateInvoiceForm({ onSubmit, isSubmitting, onCancel }: CreateIn
     </Form>
   );
 }
-
-// Add Input component for tax rate
-import { Input } from '@/components/ui/input';
 
 export default CreateInvoiceForm;

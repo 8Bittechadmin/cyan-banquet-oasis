@@ -9,6 +9,8 @@ import { InputField, SelectField, TextareaField, CheckboxField } from '@/compone
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { X } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Badge } from '@/components/ui/badge';
 
 const menuItemFormSchema = z.object({
   name: z.string().min(1, "Menu item name is required"),
@@ -22,7 +24,7 @@ const menuItemFormSchema = z.object({
 type MenuItemFormValues = z.infer<typeof menuItemFormSchema>;
 
 type CreateMenuItemFormProps = {
-  onSubmit: (values: MenuItemFormValues) => void;
+  onSubmit: (values: MenuItemFormValues & { ingredients?: string[] }) => void;
   isSubmitting: boolean;
   onCancel: () => void;
 }
@@ -76,7 +78,6 @@ export function CreateMenuItemForm({ onSubmit, isSubmitting, onCancel }: CreateM
   const handleSubmitWithIngredients = (values: MenuItemFormValues) => {
     onSubmit({
       ...values,
-      // Add ingredients to the form values
       ingredients: ingredients.length > 0 ? ingredients : undefined,
     });
   };
@@ -178,8 +179,5 @@ export function CreateMenuItemForm({ onSubmit, isSubmitting, onCancel }: CreateM
     </Form>
   );
 }
-
-// Add Input component for ingredients
-import { Input } from '@/components/ui/input';
 
 export default CreateMenuItemForm;

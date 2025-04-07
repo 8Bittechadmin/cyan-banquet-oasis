@@ -11,6 +11,8 @@ interface InputFieldProps {
   placeholder?: string;
   type?: string;
   className?: string;
+  step?: string;
+  readOnly?: boolean;
 }
 
 export const InputField: React.FC<InputFieldProps> = ({
@@ -19,7 +21,9 @@ export const InputField: React.FC<InputFieldProps> = ({
   label,
   placeholder,
   type = 'text',
-  className
+  className,
+  step,
+  readOnly
 }) => {
   return (
     <FormField
@@ -32,6 +36,8 @@ export const InputField: React.FC<InputFieldProps> = ({
             <Input 
               placeholder={placeholder} 
               type={type} 
+              step={step}
+              readOnly={readOnly}
               {...field}
               value={field.value || ''}
             />
