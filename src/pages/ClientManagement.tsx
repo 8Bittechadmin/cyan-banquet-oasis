@@ -50,7 +50,8 @@ const ClientManagement: React.FC = () => {
   // Get client statistics
   const clientStats = {
     total: clients.length,
-    active: clients.filter(c => c.status !== 'inactive').length,
+    // Assume all clients are active since there is no status field
+    active: clients.length,
     newThisMonth: clients.filter(c => {
       const createdAt = new Date(c.created_at || '');
       const now = new Date();
@@ -222,8 +223,9 @@ const ClientManagement: React.FC = () => {
                         </div>
                       </TableCell>
                       <TableCell>
-                        <Badge className={getStatusColor(client.status || 'active')}>
-                          {(client.status || 'Active').charAt(0).toUpperCase() + (client.status || 'active').slice(1)}
+                        {/* Since there's no status field, we'll display "Active" as default */}
+                        <Badge className="bg-green-100 text-green-800 hover:bg-green-200">
+                          Active
                         </Badge>
                       </TableCell>
                     </TableRow>
