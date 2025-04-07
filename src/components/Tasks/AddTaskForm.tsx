@@ -73,27 +73,27 @@ export function AddTaskForm({ onSubmit, isSubmitting, bookingId }: AddTaskFormPr
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
         <InputField
-          control={form.control}
+          form={form}
           name="title"
           label="Task Title"
           placeholder="Enter task title"
         />
         
         <TextareaField
-          control={form.control}
+          form={form}
           name="description"
           label="Description"
           placeholder="Enter task description"
         />
         
         <DateTimeField
-          control={form.control}
+          form={form}
           name="due_date"
           label="Due Date"
         />
         
         <SelectField
-          control={form.control}
+          form={form}
           name="status"
           label="Status"
           options={[
@@ -104,7 +104,7 @@ export function AddTaskForm({ onSubmit, isSubmitting, bookingId }: AddTaskFormPr
         />
         
         <SelectField
-          control={form.control}
+          form={form}
           name="assigned_to"
           label="Assigned To"
           options={staffOptions}
@@ -113,7 +113,7 @@ export function AddTaskForm({ onSubmit, isSubmitting, bookingId }: AddTaskFormPr
         
         {!bookingId && (
           <SelectField
-            control={form.control}
+            form={form}
             name="booking_id"
             label="Related Event"
             options={bookingOptions}

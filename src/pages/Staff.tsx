@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import AppLayout from '@/components/AppLayout';
@@ -14,6 +13,7 @@ import StaffModal from '@/components/Staff/StaffModal';
 import { supabase, StaffMember } from '@/integrations/supabase/client';
 import ExportButton from '@/components/Common/ExportButton';
 import { toast } from '@/hooks/use-toast';
+import { Calendar } from '@/components/ui/staff-calendar';
 
 // Mock staff stats
 const mockStaffStats = {
