@@ -55,26 +55,43 @@ const Bookings: React.FC = () => {
   const { data: bookingsData = [], isLoading } = useQuery({
     queryKey: ['bookings'],
     queryFn: async () => {
-      const { data, error } = await supabase
+      // First, fetch the bookings data
+      const { data: bookingsData, error: bookingsError } = await supabase
         .from('bookings')
-        .select(`
-          *,
-          client:clients(id, name),
-          venue:venues(id, name)
-        `)
+        .select('*')
         .order('start_date');
       
-      if (error) {
-        console.error('Error fetching bookings:', error);
-        throw error;
+      if (bookingsError) {
+        console.error('Error fetching bookings:', bookingsError);
+        throw bookingsError;
       }
 
-      // Transform data to ensure it matches the expected format
-      const formattedBookings: Booking[] = (data || []).map(booking => ({
+      // Then, fetch clients and venues separately
+      const { data: clientsData } = await supabase
+        .from('clients')
+        .select('id, name');
+
+      const { data: venuesData } = await supabase
+        .from('venues')
+        .select('id, name');
+
+      const clientsMap = new Map();
+      const venuesMap = new Map();
+
+      // Create maps for quick lookups
+      if (clientsData) {
+        clientsData.forEach(client => clientsMap.set(client.id, client));
+      }
+      
+      if (venuesData) {
+        venuesData.forEach(venue => venuesMap.set(venue.id, venue));
+      }
+
+      // Combine data to create the complete bookings array
+      const formattedBookings: Booking[] = (bookingsData || []).map(booking => ({
         ...booking,
-        // Handle potential null references
-        client: booking.client || null,
-        venue: booking.venue || null
+        client: booking.client_id ? clientsMap.get(booking.client_id) || null : null,
+        venue: booking.venue_id ? venuesMap.get(booking.venue_id) || null : null
       }));
 
       return formattedBookings;

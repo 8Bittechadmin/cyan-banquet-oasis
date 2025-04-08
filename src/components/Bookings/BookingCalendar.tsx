@@ -173,7 +173,7 @@ export const BookingCalendar: React.FC<BookingCalendarProps> = ({ bookings }) =>
                       </p>
                       <p className="text-xs mt-1">
                         {format(new Date(booking.start_date), 'h:mm a')} - 
-                        {format(new Date(booking.end_date), 'h:mm a')}
+                        {booking.end_date && format(new Date(booking.end_date), 'h:mm a')}
                       </p>
                     </div>
                     <div className="flex space-x-2">
