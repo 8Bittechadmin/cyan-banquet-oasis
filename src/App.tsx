@@ -1,4 +1,3 @@
-
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -21,8 +20,30 @@ import Billing from "./pages/Billing";
 import ClientManagement from "./pages/ClientManagement";
 import Reports from "./pages/Reports";
 import Settings from "./pages/Settings";
+import EditBooking from "./pages/EditBooking";
 
 const queryClient = new QueryClient();
+
+const routes = [
+  <Route path="/" element={<Index />} />,
+  <Route path="/landing" element={<Landing />} />,
+  <Route path="/login-admin" element={<LoginAdmin />} />,
+  <Route path="/login-staff" element={<LoginStaff />} />,
+  <Route path="/dashboard" element={<Dashboard />} />,
+  <Route path="/bookings" element={<Bookings />} />,
+  <Route path="/bookings/new" element={<BookingForm />} />,
+  <Route path="/inventory" element={<Inventory />} />,
+  <Route path="/venues" element={<Venues />} />,
+  <Route path="/event-planning" element={<EventPlanning />} />,
+  <Route path="/catering" element={<Catering />} />,
+  <Route path="/staff" element={<Staff />} />,
+  <Route path="/billing" element={<Billing />} />,
+  <Route path="/clients" element={<ClientManagement />} />,
+  <Route path="/reports" element={<Reports />} />,
+  <Route path="/settings" element={<Settings />} />,
+  <Route path="/bookings/edit/:id" element={<EditBooking />} />,
+  <Route path="*" element={<NotFound />} />,
+];
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
@@ -31,24 +52,7 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <Routes>
-          <Route path="/" element={<Index />} />
-          <Route path="/landing" element={<Landing />} />
-          <Route path="/login-admin" element={<LoginAdmin />} />
-          <Route path="/login-staff" element={<LoginStaff />} />
-          <Route path="/dashboard" element={<Dashboard />} />
-          <Route path="/bookings" element={<Bookings />} />
-          <Route path="/bookings/new" element={<BookingForm />} />
-          <Route path="/inventory" element={<Inventory />} />
-          <Route path="/venues" element={<Venues />} />
-          <Route path="/event-planning" element={<EventPlanning />} />
-          <Route path="/catering" element={<Catering />} />
-          <Route path="/staff" element={<Staff />} />
-          <Route path="/billing" element={<Billing />} />
-          <Route path="/clients" element={<ClientManagement />} />
-          <Route path="/reports" element={<Reports />} />
-          <Route path="/settings" element={<Settings />} />
-          {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-          <Route path="*" element={<NotFound />} />
+          {routes}
         </Routes>
       </BrowserRouter>
     </TooltipProvider>

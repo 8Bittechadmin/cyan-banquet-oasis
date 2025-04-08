@@ -1,72 +1,68 @@
-import React, { useState } from 'react';
+
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import AppLayout from '@/components/AppLayout';
 import PageHeader from '@/components/PageHeader';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import { Calendar, List, Plus, Filter, Search } from 'lucide-react';
+import { Calendar, List, Plus, Filter, Search, X } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
+import BookingCalendar from '@/components/Bookings/BookingCalendar';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
 
 const Bookings: React.FC = () => {
   const [viewType, setViewType] = useState<'calendar' | 'list'>('calendar');
+  const [activeTab, setActiveTab] = useState('all');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [isFilterOpen, setIsFilterOpen] = useState(false);
+  
   const navigate = useNavigate();
   
-  // Mock booking data
-  const bookings = [
-    {
-      id: 'B001',
-      client: 'Johnson Family',
-      event: 'Wedding Reception',
-      venue: 'Grand Ballroom',
-      date: '2025-04-15',
-      time: '18:00 - 22:00',
-      guests: 150,
-      status: 'confirmed'
+  const { data: bookings = [], isLoading } = useQuery({
+    queryKey: ['bookings'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('bookings')
+        .select(`
+          *,
+          client:client_id(*),
+          venue:venue_id(*)
+        `)
+        .order('start_date');
+      
+      if (error) {
+        console.error('Error fetching bookings:', error);
+        throw error;
+      }
+
+      return data || [];
     },
-    {
-      id: 'B002',
-      client: 'TechCorp Inc.',
-      event: 'Annual Conference',
-      venue: 'Conference Hall A',
-      date: '2025-04-10',
-      time: '09:00 - 17:00',
-      guests: 80,
-      status: 'pending'
-    },
-    {
-      id: 'B003',
-      client: 'Smith Graduation',
-      event: 'Graduation Party',
-      venue: 'Garden Pavilion',
-      date: '2025-04-20',
-      time: '14:00 - 18:00',
-      guests: 60,
-      status: 'confirmed'
-    },
-    {
-      id: 'B004',
-      client: 'Martinez Birthday',
-      event: 'Birthday Celebration',
-      venue: 'Terrace Hall',
-      date: '2025-04-08',
-      time: '19:00 - 23:00',
-      guests: 45,
-      status: 'cancelled'
-    },
-    {
-      id: 'B005',
-      client: 'City Council',
-      event: 'Charity Gala',
-      venue: 'Grand Ballroom',
-      date: '2025-04-25',
-      time: '18:30 - 23:30',
-      guests: 200,
-      status: 'confirmed'
-    },
-  ];
+  });
+  
+  // Filter bookings based on the active tab and search term
+  const filteredBookings = bookings.filter(booking => {
+    // Filter by status
+    if (activeTab !== 'all' && booking.status !== activeTab) {
+      return false;
+    }
+    
+    // Filter by search term
+    if (searchTerm) {
+      const searchLower = searchTerm.toLowerCase();
+      return (
+        booking.event_name.toLowerCase().includes(searchLower) ||
+        booking.event_type.toLowerCase().includes(searchLower) ||
+        (booking.client?.name || '').toLowerCase().includes(searchLower) ||
+        (booking.venue?.name || '').toLowerCase().includes(searchLower)
+      );
+    }
+    
+    return true;
+  });
   
   const getStatusColor = (status: string) => {
     switch(status) {
@@ -76,18 +72,6 @@ const Bookings: React.FC = () => {
       default: return 'bg-gray-100 text-gray-800 hover:bg-gray-200';
     }
   };
-  
-  // Calendar view placeholder (in a real app this would be a full calendar component)
-  const CalendarView = () => (
-    <div className="bg-white rounded-md border min-h-[600px] p-6">
-      <div className="text-center text-gray-500 pt-40">
-        <Calendar className="mx-auto h-12 w-12 text-gray-400" />
-        <h3 className="mt-4 text-lg font-medium">Calendar View</h3>
-        <p className="mt-1">Calendar implementation with event visualization would be shown here.</p>
-        <p className="text-sm mt-2">Libraries like FullCalendar or React Big Calendar can be integrated here.</p>
-      </div>
-    </div>
-  );
   
   return (
     <AppLayout>
@@ -104,6 +88,8 @@ const Bookings: React.FC = () => {
       <div className="mb-6 flex flex-col sm:flex-row gap-4 justify-between">
         <Tabs 
           defaultValue="all" 
+          value={activeTab}
+          onValueChange={setActiveTab}
           className="w-full max-w-md"
         >
           <TabsList className="grid grid-cols-4">
@@ -139,55 +125,102 @@ const Bookings: React.FC = () => {
           <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-500" />
           <Input 
             placeholder="Search bookings..." 
-            className="w-full pl-9" 
+            className="w-full pl-9"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
           />
+          {searchTerm && (
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              className="absolute right-2 top-2 h-5 w-5"
+              onClick={() => setSearchTerm('')}
+            >
+              <X className="h-3 w-3" />
+            </Button>
+          )}
         </div>
-        <Button variant="outline" className="flex gap-2">
+        <Button 
+          variant="outline" 
+          className="flex gap-2"
+          onClick={() => setIsFilterOpen(!isFilterOpen)}
+        >
           <Filter className="h-4 w-4" />
           <span>Filter</span>
         </Button>
       </div>
       
-      {viewType === 'calendar' ? (
-        <CalendarView />
+      {isLoading ? (
+        <div className="flex justify-center items-center h-64">
+          <div className="text-center">
+            <div className="inline-block animate-spin h-8 w-8 border-4 border-t-blue-500 border-r-transparent border-b-blue-500 border-l-transparent rounded-full mb-4"></div>
+            <p>Loading bookings...</p>
+          </div>
+        </div>
+      ) : viewType === 'calendar' ? (
+        <BookingCalendar bookings={filteredBookings} />
       ) : (
         <Card>
           <CardHeader className="pb-2">
             <CardTitle>Upcoming Bookings</CardTitle>
           </CardHeader>
           <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>ID</TableHead>
-                  <TableHead>Client</TableHead>
-                  <TableHead className="hidden md:table-cell">Event</TableHead>
-                  <TableHead className="hidden lg:table-cell">Venue</TableHead>
-                  <TableHead>Date</TableHead>
-                  <TableHead className="hidden sm:table-cell">Time</TableHead>
-                  <TableHead className="hidden lg:table-cell">Guests</TableHead>
-                  <TableHead>Status</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {bookings.map(booking => (
-                  <TableRow key={booking.id} className="cursor-pointer hover:bg-gray-50">
-                    <TableCell className="font-medium">{booking.id}</TableCell>
-                    <TableCell>{booking.client}</TableCell>
-                    <TableCell className="hidden md:table-cell">{booking.event}</TableCell>
-                    <TableCell className="hidden lg:table-cell">{booking.venue}</TableCell>
-                    <TableCell>{booking.date}</TableCell>
-                    <TableCell className="hidden sm:table-cell">{booking.time}</TableCell>
-                    <TableCell className="hidden lg:table-cell">{booking.guests}</TableCell>
-                    <TableCell>
-                      <Badge className={getStatusColor(booking.status)}>
-                        {booking.status.charAt(0).toUpperCase() + booking.status.slice(1)}
-                      </Badge>
-                    </TableCell>
+            {filteredBookings.length === 0 ? (
+              <div className="text-center p-8 text-muted-foreground">
+                No bookings found matching the current filters.
+              </div>
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>ID</TableHead>
+                    <TableHead>Client</TableHead>
+                    <TableHead className="hidden md:table-cell">Event</TableHead>
+                    <TableHead className="hidden lg:table-cell">Venue</TableHead>
+                    <TableHead>Date</TableHead>
+                    <TableHead className="hidden sm:table-cell">Time</TableHead>
+                    <TableHead className="hidden lg:table-cell">Guests</TableHead>
+                    <TableHead>Status</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {filteredBookings.map(booking => (
+                    <TableRow 
+                      key={booking.id} 
+                      className="cursor-pointer hover:bg-gray-50"
+                      onClick={() => navigate(`/bookings/edit/${booking.id}`)}
+                    >
+                      <TableCell className="font-medium">
+                        {booking.id.substring(0, 6)}...
+                      </TableCell>
+                      <TableCell>
+                        {booking.client?.name || 'No client'}
+                      </TableCell>
+                      <TableCell className="hidden md:table-cell">
+                        {booking.event_name}
+                      </TableCell>
+                      <TableCell className="hidden lg:table-cell">
+                        {booking.venue?.name || 'No venue'}
+                      </TableCell>
+                      <TableCell>
+                        {new Date(booking.start_date).toLocaleDateString()}
+                      </TableCell>
+                      <TableCell className="hidden sm:table-cell">
+                        {new Date(booking.start_date).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                      </TableCell>
+                      <TableCell className="hidden lg:table-cell">
+                        {booking.guest_count}
+                      </TableCell>
+                      <TableCell>
+                        <Badge className={getStatusColor(booking.status)}>
+                          {booking.status.charAt(0).toUpperCase() + booking.status.slice(1)}
+                        </Badge>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            )}
           </CardContent>
         </Card>
       )}

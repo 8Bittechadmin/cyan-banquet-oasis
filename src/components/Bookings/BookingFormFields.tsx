@@ -1,162 +1,243 @@
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
+import { CardContent, CardFooter } from '@/components/ui/card';
+import { InputField, SelectField, TextareaField, CheckboxField, DateTimeField } from '@/components/Common/FormFields';
 import { UseFormReturn } from 'react-hook-form';
 import { useQuery } from '@tanstack/react-query';
-import { 
-  InputField, 
-  SelectField, 
-  TextareaField, 
-  CheckboxField,
-  DateTimeField
-} from '@/components/Common/FormFields';
-import { CardContent } from '@/components/ui/card';
 import { supabase } from '@/integrations/supabase/client';
-import { BookingFormValues, EVENT_TYPE_OPTIONS, STATUS_OPTIONS } from './BookingFormSchema';
+import { BookingFormValues } from './BookingFormSchema';
+import QuickAddClient from './QuickAddClient';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { AlertCircle } from 'lucide-react';
 
 interface BookingFormFieldsProps {
   form: UseFormReturn<BookingFormValues>;
 }
 
 const BookingFormFields: React.FC<BookingFormFieldsProps> = ({ form }) => {
-  const { data: venues, isLoading: loadingVenues } = useQuery({
-    queryKey: ['venues'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('venues')
-        .select('*');
-      
-      if (error) throw error;
-      return data || [];
-    },
-  });
+  const [clientOptions, setClientOptions] = useState<{ value: string; label: string; }[]>([]);
+  const [venueOptions, setVenueOptions] = useState<{ value: string; label: string; }[]>([]);
+  const [depositAmount, setDepositAmount] = useState<number | undefined>(form.getValues('deposit_amount'));
+  const [totalAmount, setTotalAmount] = useState<number | undefined>(form.getValues('total_amount'));
 
-  const { data: clients, isLoading: loadingClients } = useQuery({
+  // Query to get all clients
+  const { data: clients = [], isLoading: isClientsLoading } = useQuery({
     queryKey: ['clients'],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('clients')
-        .select('*');
+        .select('*')
+        .order('name');
       
       if (error) throw error;
       return data || [];
     },
   });
 
-  const venueOptions = venues?.map(venue => ({ 
-    value: venue.id, 
-    label: venue.name 
-  })) || [];
-  
-  const clientOptions = clients?.map(client => ({
-    value: client.id,
-    label: client.name
-  })) || [];
+  // Query to get all venues
+  const { data: venues = [], isLoading: isVenuesLoading } = useQuery({
+    queryKey: ['venues'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('venues')
+        .select('*')
+        .order('name');
+      
+      if (error) throw error;
+      return data || [];
+    },
+  });
 
-  // Handle numeric field updates
-  const handleNumberChange = (fieldName: keyof BookingFormValues, value: string) => {
-    form.setValue(fieldName as any, Number(value) || 0);
+  // Format options for select fields
+  useEffect(() => {
+    if (clients.length > 0) {
+      setClientOptions(clients.map(client => ({
+        value: client.id,
+        label: client.name
+      })));
+    }
+  }, [clients]);
+
+  useEffect(() => {
+    if (venues.length > 0) {
+      setVenueOptions(venues.map(venue => ({
+        value: venue.id,
+        label: venue.name
+      })));
+    }
+  }, [venues]);
+
+  // Handle client addition
+  const handleClientAdded = (client: { id: string; name: string }) => {
+    // Add the new client to the options
+    setClientOptions(prev => [...prev, { value: client.id, label: client.name }]);
+    
+    // Set the form value to the new client
+    form.setValue('client_id', client.id);
   };
 
+  // Handle number inputs for financial fields
+  const handleTotalAmountChange = (value: any) => {
+    setTotalAmount(value);
+    
+    // If deposit amount is greater than the new total, adjust it
+    if (depositAmount && depositAmount > value) {
+      setDepositAmount(value);
+      form.setValue('deposit_amount', value);
+    }
+  };
+
+  const handleDepositAmountChange = (value: any) => {
+    // Ensure deposit doesn't exceed total
+    const total = totalAmount || 0;
+    const deposit = value > total ? total : value;
+    
+    setDepositAmount(deposit);
+  };
+
+  const EVENT_TYPE_OPTIONS = [
+    { value: 'wedding', label: 'Wedding' },
+    { value: 'corporate', label: 'Corporate Event' },
+    { value: 'birthday', label: 'Birthday Party' },
+    { value: 'conference', label: 'Conference' },
+    { value: 'other', label: 'Other' }
+  ];
+
+  const STATUS_OPTIONS = [
+    { value: 'pending', label: 'Pending' },
+    { value: 'confirmed', label: 'Confirmed' },
+    { value: 'cancelled', label: 'Cancelled' }
+  ];
+
   return (
-    <CardContent className="space-y-6">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <InputField
+    <CardContent>
+      <div className="grid gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <InputField
+            form={form}
+            name="event_name"
+            label="Event Name"
+            placeholder="Enter event name"
+          />
+          
+          <SelectField
+            form={form}
+            name="event_type"
+            label="Event Type"
+            options={EVENT_TYPE_OPTIONS}
+          />
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <div className="flex justify-between items-end mb-1">
+              <label className="text-sm font-medium" htmlFor="client_id">Client</label>
+              <QuickAddClient onClientAdded={handleClientAdded} />
+            </div>
+            <SelectField
+              form={form}
+              name="client_id"
+              label=""
+              options={clientOptions}
+              className="mt-0"
+            />
+          </div>
+
+          <SelectField
+            form={form}
+            name="venue_id"
+            label="Venue"
+            options={venueOptions}
+          />
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <DateTimeField
+            form={form}
+            name="start_date"
+            label="Start Date & Time"
+          />
+
+          <DateTimeField
+            form={form}
+            name="end_date"
+            label="End Date & Time"
+          />
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <InputField
+            form={form}
+            name="guest_count"
+            label="Number of Guests"
+            type="number"
+            placeholder="0"
+            onChange={(e) => {
+              const numValue = e.target.value !== '' ? parseInt(e.target.value) : '';
+              form.setValue('guest_count', numValue as any);
+            }}
+          />
+          
+          <InputField
+            form={form}
+            name="total_amount"
+            label="Total Amount"
+            type="number"
+            step="0.01"
+            placeholder="0.00"
+            onChange={(e) => {
+              const numValue = e.target.value !== '' ? parseFloat(e.target.value) : '';
+              form.setValue('total_amount', numValue as any);
+              handleTotalAmountChange(numValue);
+            }}
+          />
+          
+          <InputField
+            form={form}
+            name="deposit_amount"
+            label="Deposit Amount"
+            type="number"
+            step="0.01"
+            placeholder="0.00"
+            onChange={(e) => {
+              const numValue = e.target.value !== '' ? parseFloat(e.target.value) : '';
+              form.setValue('deposit_amount', numValue as any);
+              handleDepositAmountChange(numValue);
+            }}
+          />
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <CheckboxField
+            form={form}
+            name="deposit_paid"
+            label="Deposit Paid"
+          />
+
+          <SelectField
+            form={form}
+            name="status"
+            label="Status"
+            options={STATUS_OPTIONS}
+          />
+        </div>
+
+        <TextareaField
           form={form}
-          name="event_name"
-          label="Event Name"
-          placeholder="Enter event name"
+          name="notes"
+          label="Notes"
+          placeholder="Enter any additional notes about this booking"
         />
-        
-        <SelectField
-          form={form}
-          name="event_type"
-          label="Event Type"
-          options={EVENT_TYPE_OPTIONS}
-          placeholder="Select event type"
-        />
+
+        {(depositAmount && totalAmount && depositAmount > totalAmount) && (
+          <Alert variant="destructive">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>
+              Deposit amount cannot be greater than the total amount.
+            </AlertDescription>
+          </Alert>
+        )}
       </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <SelectField
-          form={form}
-          name="venue_id"
-          label="Venue"
-          options={venueOptions}
-          placeholder={loadingVenues ? "Loading venues..." : "Select venue"}
-        />
-        
-        <SelectField
-          form={form}
-          name="client_id"
-          label="Client"
-          options={clientOptions}
-          placeholder={loadingClients ? "Loading clients..." : "Select client"}
-        />
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <DateTimeField
-          form={form}
-          name="start_date"
-          label="Start Date & Time"
-        />
-        
-        <DateTimeField
-          form={form}
-          name="end_date"
-          label="End Date & Time"
-        />
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <InputField
-          form={form}
-          name="guest_count"
-          label="Guest Count"
-          type="number"
-          onChange={(e) => handleNumberChange('guest_count', e.target.value)}
-        />
-        
-        <InputField
-          form={form}
-          name="total_amount"
-          label="Total Amount"
-          type="number"
-          placeholder="0.00"
-          onChange={(e) => handleNumberChange('total_amount', e.target.value)}
-        />
-        
-        <InputField
-          form={form}
-          name="deposit_amount"
-          label="Deposit Amount"
-          type="number"
-          placeholder="0.00"
-          onChange={(e) => handleNumberChange('deposit_amount', e.target.value)}
-        />
-      </div>
-
-      <SelectField
-        form={form}
-        name="status"
-        label="Status"
-        options={STATUS_OPTIONS}
-        placeholder="Select status"
-      />
-
-      <CheckboxField
-        form={form}
-        name="deposit_paid"
-        label="Deposit Paid"
-        description="Check if the deposit amount has been paid"
-      />
-
-      <TextareaField
-        form={form}
-        name="notes"
-        label="Notes"
-        placeholder="Additional notes about this booking"
-      />
     </CardContent>
   );
 };

@@ -15,6 +15,7 @@ interface InputFieldProps {
   readOnly?: boolean;
   onValueChange?: (value: any) => void;
   onChange?: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  value?: string | number;
 }
 
 export const InputField: React.FC<InputFieldProps> = ({
@@ -27,7 +28,8 @@ export const InputField: React.FC<InputFieldProps> = ({
   step,
   readOnly,
   onValueChange,
-  onChange
+  onChange,
+  value
 }) => {
   return (
     <FormField
@@ -43,15 +45,17 @@ export const InputField: React.FC<InputFieldProps> = ({
               step={step}
               readOnly={readOnly}
               {...field}
-              value={field.value || ''}
+              value={(value !== undefined) ? value : (field.value || '')}
               onChange={(e) => {
-                if (onChange) {
-                  onChange(e);
+                // For number inputs, ensure we're passing a number to the form state
+                if (type === 'number' && e.target.value !== '') {
+                  const numValue = parseFloat(e.target.value);
+                  field.onChange(numValue);
+                  if (onValueChange) onValueChange(numValue);
                 } else {
                   field.onChange(e);
-                  if (onValueChange) {
-                    onValueChange(e.target.value);
-                  }
+                  if (onChange) onChange(e);
+                  if (onValueChange) onValueChange(e.target.value);
                 }
               }}
             />
