@@ -10,6 +10,8 @@ interface TextareaFieldProps {
   label: string;
   placeholder?: string;
   className?: string;
+  value?: string; // Added value prop
+  onChange?: (e: React.ChangeEvent<HTMLTextAreaElement>) => void; // Added onChange prop
 }
 
 export const TextareaField: React.FC<TextareaFieldProps> = ({
@@ -17,7 +19,9 @@ export const TextareaField: React.FC<TextareaFieldProps> = ({
   name,
   label,
   placeholder,
-  className
+  className,
+  value,
+  onChange
 }) => {
   return (
     <FormField
@@ -29,9 +33,17 @@ export const TextareaField: React.FC<TextareaFieldProps> = ({
           <FormControl>
             <Textarea
               placeholder={placeholder}
-              {...field}
-              value={field.value || ''}
               className="min-h-[100px]"
+              {...field}
+              // Use controlled value if provided, otherwise use field value
+              value={value !== undefined ? value : (field.value || '')}
+              onChange={(e) => {
+                if (onChange) {
+                  onChange(e);
+                } else {
+                  field.onChange(e);
+                }
+              }}
             />
           </FormControl>
           <FormMessage />

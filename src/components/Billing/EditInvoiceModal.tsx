@@ -5,6 +5,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import CreateInvoiceForm from './CreateInvoiceForm';
+import { Button } from '@/components/ui/button'; // Added missing Button import
 
 interface EditInvoiceModalProps {
   open: boolean;
@@ -109,7 +110,7 @@ const EditInvoiceModal: React.FC<EditInvoiceModalProps> = ({
             onSubmit={handleSubmit}
             isSubmitting={updateInvoice.isPending}
             onCancel={() => onOpenChange(false)}
-            initialValues={{
+            initialData={{  // Changed to initialData from initialValues
               invoice_number: invoice.invoice_number,
               booking_id: invoice.booking_id || '',
               issue_date: invoice.issue_date || '',

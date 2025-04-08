@@ -19,13 +19,15 @@ interface StaffModalProps {
   onOpenChange: (open: boolean) => void;
   staff?: any;
   mode?: 'create' | 'edit';
+  onSubmit?: (values: StaffFormValues) => Promise<any>; // Added this prop
 }
 
 export const StaffModal: React.FC<StaffModalProps> = ({ 
   open, 
   onOpenChange,
   staff,
-  mode = 'create'
+  mode = 'create',
+  onSubmit: externalSubmit // Handle external submit prop
 }) => {
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const queryClient = useQueryClient();
@@ -128,7 +130,10 @@ export const StaffModal: React.FC<StaffModalProps> = ({
   });
 
   const handleSubmit = async (values: StaffFormValues) => {
-    if (mode === 'create') {
+    // If external submit handler is provided, use that
+    if (externalSubmit) {
+      externalSubmit(values);
+    } else if (mode === 'create') {
       createStaff.mutate(values);
     } else {
       updateStaff.mutate(values);
@@ -157,7 +162,7 @@ export const StaffModal: React.FC<StaffModalProps> = ({
           onSubmit={handleSubmit}
           onCancel={() => onOpenChange(false)}
           isSubmitting={createStaff.isPending || updateStaff.isPending}
-          initialValues={staff ? {
+          initialData={staff ? {  // Changed from initialValues to initialData
             name: staff.name,
             position: staff.position,
             department: staff.department,

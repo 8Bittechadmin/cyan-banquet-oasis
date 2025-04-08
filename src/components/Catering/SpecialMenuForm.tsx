@@ -128,10 +128,8 @@ export function SpecialMenuForm({ onSubmit, isSubmitting, onCancel, initialValue
         
         <div className="space-y-2">
           <label className="text-sm font-medium">Ingredients (comma separated)</label>
-          <TextareaField
-            form={form}
-            name="ingredients_text"
-            label=""
+          <textarea
+            className="min-h-[100px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
             placeholder="Enter ingredients separated by commas"
             value={ingredientsText}
             onChange={(e) => setIngredientsText(e.target.value)}

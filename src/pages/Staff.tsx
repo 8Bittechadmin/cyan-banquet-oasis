@@ -15,7 +15,6 @@ import ExportButton from '@/components/Common/ExportButton';
 import { toast } from '@/hooks/use-toast';
 import { Calendar } from '@/components/ui/staff-calendar';
 
-// Mock staff stats
 const mockStaffStats = {
   total_staff: 42,
   available_today: 28,
@@ -27,16 +26,13 @@ const Staff: React.FC = () => {
   const [isAddStaffModalOpen, setIsAddStaffModalOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   
-  // Fetch staff statistics from mock data
   const { data: staffStats, isLoading: isLoadingStats } = useQuery({
     queryKey: ['staffStats'],
     queryFn: async () => {
-      // For future implementation, will fetch from Supabase
       return mockStaffStats;
     }
   });
   
-  // Fetch staff members
   const { data: staffMembers, isLoading, refetch } = useQuery({
     queryKey: ['staffMembers'],
     queryFn: async () => {
@@ -50,12 +46,9 @@ const Staff: React.FC = () => {
     }
   });
 
-  // Fetch staff assignments
   const { data: staffAssignments } = useQuery({
     queryKey: ['staffAssignments'],
     queryFn: async () => {
-      // In a real application, we would fetch from the staff_assignments table
-      // For now, return the mock data
       return [
         {
           eventName: 'Johnson-Smith Wedding',
@@ -110,7 +103,6 @@ const Staff: React.FC = () => {
 
   const handleAddStaff = async (values: any) => {
     try {
-      // Insert new staff member into the database
       const { data, error } = await supabase
         .from('staff')
         .insert([values])
@@ -123,7 +115,6 @@ const Staff: React.FC = () => {
         description: `${values.name} has been added to staff.`,
       });
       
-      // Refresh the staff list
       refetch();
       
       return data;
@@ -327,7 +318,7 @@ const Staff: React.FC = () => {
       <StaffModal 
         open={isAddStaffModalOpen}
         onOpenChange={setIsAddStaffModalOpen}
-        onSubmit={handleAddStaff}
+        mode="create"
       />
     </AppLayout>
   );

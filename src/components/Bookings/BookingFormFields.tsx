@@ -52,6 +52,11 @@ const BookingFormFields: React.FC<BookingFormFieldsProps> = ({ form }) => {
     label: client.name
   })) || [];
 
+  // Handle numeric field updates
+  const handleNumberChange = (fieldName: keyof BookingFormValues, value: string) => {
+    form.setValue(fieldName as any, Number(value) || 0);
+  };
+
   return (
     <CardContent className="space-y-6">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -109,10 +114,7 @@ const BookingFormFields: React.FC<BookingFormFieldsProps> = ({ form }) => {
           name="guest_count"
           label="Guest Count"
           type="number"
-          onValueChange={(value) => {
-            // Convert string to number for numeric fields
-            form.setValue('guest_count', Number(value) || 0);
-          }}
+          onChange={(e) => handleNumberChange('guest_count', e.target.value)}
         />
         
         <InputField
@@ -121,10 +123,7 @@ const BookingFormFields: React.FC<BookingFormFieldsProps> = ({ form }) => {
           label="Total Amount"
           type="number"
           placeholder="0.00"
-          onValueChange={(value) => {
-            // Convert string to number for numeric fields
-            form.setValue('total_amount', Number(value) || 0);
-          }}
+          onChange={(e) => handleNumberChange('total_amount', e.target.value)}
         />
         
         <InputField
@@ -133,10 +132,7 @@ const BookingFormFields: React.FC<BookingFormFieldsProps> = ({ form }) => {
           label="Deposit Amount"
           type="number"
           placeholder="0.00"
-          onValueChange={(value) => {
-            // Convert string to number for numeric fields
-            form.setValue('deposit_amount', Number(value) || 0);
-          }}
+          onChange={(e) => handleNumberChange('deposit_amount', e.target.value)}
         />
       </div>
 

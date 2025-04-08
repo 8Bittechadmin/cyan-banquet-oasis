@@ -128,10 +128,7 @@ export function CreateEventForm({ onSubmit, isSubmitting, onCancel, initialValue
             label="Guest Count"
             placeholder="Enter number of guests"
             type="number"
-            onValueChange={(value) => {
-              // Ensure it's a number
-              form.setValue('guest_count', Number(value) || 1);
-            }}
+            // Changed to use the standard onChange handling
           />
           
           <SelectField

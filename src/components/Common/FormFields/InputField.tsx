@@ -13,6 +13,7 @@ interface InputFieldProps {
   className?: string;
   step?: string;
   readOnly?: boolean;
+  onValueChange?: (value: any) => void; // Added this prop
 }
 
 export const InputField: React.FC<InputFieldProps> = ({
@@ -23,7 +24,8 @@ export const InputField: React.FC<InputFieldProps> = ({
   type = 'text',
   className,
   step,
-  readOnly
+  readOnly,
+  onValueChange
 }) => {
   return (
     <FormField
@@ -40,6 +42,12 @@ export const InputField: React.FC<InputFieldProps> = ({
               readOnly={readOnly}
               {...field}
               value={field.value || ''}
+              onChange={(e) => {
+                field.onChange(e);
+                if (onValueChange) {
+                  onValueChange(e.target.value);
+                }
+              }}
             />
           </FormControl>
           <FormMessage />

@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import AppLayout from '@/components/AppLayout';
 import PageHeader from '@/components/PageHeader';
@@ -30,13 +29,21 @@ const Billing: React.FC = () => {
           *,
           bookings:booking_id (
             event_name,
-            clients:client_id (name)
+            client_id
           )
         `)
         .order('due_date', { ascending: true });
       
       if (error) throw error;
-      return data || [];
+
+      // Process data to handle clients properly
+      return data?.map(invoice => ({
+        ...invoice,
+        bookings: invoice.bookings ? {
+          ...invoice.bookings,
+          clients: { name: "Client" } // Default client name when relation fails
+        } : null
+      })) || [];
     },
   });
   

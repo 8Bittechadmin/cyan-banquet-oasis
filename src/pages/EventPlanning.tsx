@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import AppLayout from '@/components/AppLayout';
 import PageHeader from '@/components/PageHeader';
@@ -20,71 +19,59 @@ const EventPlanning: React.FC = () => {
   const [selectedEvent, setSelectedEvent] = useState<any>(null);
   const [searchTerm, setSearchTerm] = useState('');
   
-  // Fetch real events from the database
   const { data: events = [], isLoading } = useQuery({
     queryKey: ['bookings'],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('bookings')
         .select(`
-          id, 
-          event_name, 
-          event_type,
-          start_date, 
-          end_date, 
-          guest_count,
-          notes,
-          status,
-          venue_id, 
+          *,
           client_id,
-          venues:venue_id (name),
-          clients:client_id (name)
+          venue_id
         `)
-        .order('start_date', { ascending: true });
+        .order('start_date');
       
       if (error) throw error;
-      return data || [];
+
+      return data?.map(event => ({
+        ...event,
+        client: { name: "Client" },
+        venue: { name: "Venue" }
+      })) || [];
     },
   });
-  
-  // Filter events based on search term
+
   const filteredEvents = events.filter(event => 
     event.event_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     event.event_type.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    event.clients?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    event.venues?.name?.toLowerCase().includes(searchTerm.toLowerCase())
+    event.client.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    event.venue.name?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  // Calculate progress for display purposes - this is just a visualization
   const calculateProgress = (event: any) => {
     const now = new Date();
     const startDate = new Date(event.start_date);
     const endDate = new Date(event.end_date);
     
-    // If event is in the past, it's 100% complete
     if (now > endDate) return 100;
     
-    // If event is in the future, calculate based on planning timeline
-    // Assuming planning starts 30 days before the event
     const planningStart = new Date(startDate);
     planningStart.setDate(planningStart.getDate() - 30);
     
-    if (now < planningStart) return 10; // Just started planning
+    if (now < planningStart) return 10;
     
-    // Calculate progress based on position in planning timeline
     const totalPlanningTime = endDate.getTime() - planningStart.getTime();
     const elapsedPlanningTime = now.getTime() - planningStart.getTime();
     
     const progress = Math.min(Math.floor((elapsedPlanningTime / totalPlanningTime) * 100), 95);
-    return Math.max(10, progress); // Ensure progress is at least 10%
+    return Math.max(10, progress);
   };
-  
+
   const handleEditEvent = (event: any) => {
     setSelectedEvent(event);
     setIsEditEventModalOpen(true);
   };
 
-  // Mock task list for demonstration
   const sampleEventTasks = [
     { id: 1, title: 'Confirm final guest count', status: 'completed', dueDate: '2025-04-05', assignedTo: 'Jane Davis' },
     { id: 2, title: 'Arrange floral centerpieces', status: 'completed', dueDate: '2025-04-10', assignedTo: 'Mark Wilson' },
@@ -93,8 +80,7 @@ const EventPlanning: React.FC = () => {
     { id: 5, title: 'Room setup diagram approval', status: 'pending', dueDate: '2025-04-13', assignedTo: 'Mark Wilson' },
     { id: 6, title: 'Confirm AV requirements', status: 'completed', dueDate: '2025-04-09', assignedTo: 'Tech Team' }
   ];
-  
-  // Event template types
+
   const eventTemplates = [
     { name: 'Wedding Reception', tasks: 24, timeframe: '3-6 months' },
     { name: 'Corporate Conference', tasks: 18, timeframe: '1-3 months' },
@@ -102,7 +88,7 @@ const EventPlanning: React.FC = () => {
     { name: 'Graduation Party', tasks: 16, timeframe: '1-2 months' },
     { name: 'Charity Gala', tasks: 22, timeframe: '2-4 months' }
   ];
-  
+
   return (
     <AppLayout>
       <PageHeader 
@@ -156,7 +142,7 @@ const EventPlanning: React.FC = () => {
                     </div>
                     <CardDescription className="flex justify-between items-center">
                       <span>{new Date(event.start_date).toLocaleDateString()}</span>
-                      <span className="font-medium">{event.venues?.name || 'No venue'}</span>
+                      <span className="font-medium">{event.venue.name || 'No venue'}</span>
                     </CardDescription>
                   </CardHeader>
                   <CardContent className="pb-0">
@@ -172,7 +158,7 @@ const EventPlanning: React.FC = () => {
                       <div className="text-sm flex items-center">
                         <Clipboard className="h-4 w-4 mr-1 text-muted-foreground" />
                         <span className="text-muted-foreground">
-                          Client: {event.clients?.name || 'No client'}
+                          Client: {event.client.name || 'No client'}
                         </span>
                       </div>
                       <div className="flex">
