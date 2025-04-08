@@ -14,6 +14,36 @@ import BookingCalendar from '@/components/Bookings/BookingCalendar';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 
+interface Venue {
+  id: string;
+  name: string;
+}
+
+interface Client {
+  id: string;
+  name: string;
+}
+
+interface Booking {
+  id: string;
+  client_id: string;
+  venue_id: string;
+  start_date: string;
+  end_date: string;
+  guest_count: number;
+  total_amount: number | null;
+  deposit_amount: number | null;
+  deposit_paid: boolean;
+  created_at: string;
+  updated_at: string;
+  event_type: string;
+  event_name: string;
+  status: string;
+  notes: string | null;
+  client: Client | null;
+  venue: Venue | null;
+}
+
 const Bookings: React.FC = () => {
   const [viewType, setViewType] = useState<'calendar' | 'list'>('calendar');
   const [activeTab, setActiveTab] = useState('all');
@@ -22,15 +52,15 @@ const Bookings: React.FC = () => {
   
   const navigate = useNavigate();
   
-  const { data: bookings = [], isLoading } = useQuery({
+  const { data: bookingsData = [], isLoading } = useQuery({
     queryKey: ['bookings'],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('bookings')
         .select(`
           *,
-          client:client_id(*),
-          venue:venue_id(*)
+          client:clients(id, name),
+          venue:venues(id, name)
         `)
         .order('start_date');
       
@@ -39,12 +69,20 @@ const Bookings: React.FC = () => {
         throw error;
       }
 
-      return data || [];
+      // Transform data to ensure it matches the expected format
+      const formattedBookings: Booking[] = (data || []).map(booking => ({
+        ...booking,
+        // Handle potential null references
+        client: booking.client || null,
+        venue: booking.venue || null
+      }));
+
+      return formattedBookings;
     },
   });
   
   // Filter bookings based on the active tab and search term
-  const filteredBookings = bookings.filter(booking => {
+  const filteredBookings = bookingsData.filter(booking => {
     // Filter by status
     if (activeTab !== 'all' && booking.status !== activeTab) {
       return false;

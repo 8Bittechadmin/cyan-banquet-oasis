@@ -32,7 +32,7 @@ interface Booking {
   venue: { name: string } | null;
   start_date: string;
   end_date: string;
-  guests: number;
+  guest_count: number;
   status: string;
 }
 
@@ -54,7 +54,7 @@ export const BookingCalendar: React.FC<BookingCalendarProps> = ({ bookings }) =>
     const formattedDate = format(date, 'yyyy-MM-dd');
     return bookings.filter(booking => {
       const startDate = booking.start_date.split('T')[0];
-      const endDate = booking.end_date.split('T')[0];
+      const endDate = booking.end_date ? booking.end_date.split('T')[0] : startDate;
       return startDate <= formattedDate && endDate >= formattedDate;
     });
   };
@@ -97,9 +97,9 @@ export const BookingCalendar: React.FC<BookingCalendarProps> = ({ bookings }) =>
       const hasConfirmed = bookingsOnDate.some(b => b.status === 'confirmed');
       const hasCancelled = bookingsOnDate.some(b => b.status === 'cancelled');
       
-      if (hasConfirmed) return "bg-green-100 text-green-800 font-bold";
-      if (hasCancelled) return "bg-red-100 text-red-800 font-bold";
-      return "bg-yellow-100 text-yellow-800 font-bold"; // Pending
+      if (hasConfirmed) return "bg-green-100 text-green-800 font-bold rounded-full";
+      if (hasCancelled) return "bg-red-100 text-red-800 font-bold rounded-full";
+      return "bg-yellow-100 text-yellow-800 font-bold rounded-full"; // Pending
     }
     return "";
   };
@@ -129,12 +129,6 @@ export const BookingCalendar: React.FC<BookingCalendarProps> = ({ bookings }) =>
           selected={selectedDate}
           onSelect={setSelectedDate}
           className="p-3 pointer-events-auto"
-          modifiers={{
-            booked: (date) => getBookingsForDate(date).length > 0,
-          }}
-          modifiersStyles={{
-            booked: { fontWeight: 'bold' }
-          }}
           components={{
             DayContent: ({ date }) => {
               const bookingsOnDate = getBookingsForDate(date);
