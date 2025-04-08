@@ -8,10 +8,22 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
-import { DollarSign, Users, Maximize2, CalendarCheck, ChevronLeft, ChevronRight } from 'lucide-react';
+import { DollarSign, Edit, MapPin, Maximize2, Trash2, Users, CalendarCheck, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { toast } from '@/hooks/use-toast';
+import VenueModal from './VenueModal';
+import { 
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 
 interface VenueDetailsDialogProps {
   venueId: string;
@@ -25,6 +37,9 @@ const VenueDetailsDialog: React.FC<VenueDetailsDialogProps> = ({
   onOpenChange
 }) => {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const queryClient = useQueryClient();
   
   const { data: venue, isLoading } = useQuery({
     queryKey: ['venue', venueId],
@@ -39,6 +54,48 @@ const VenueDetailsDialog: React.FC<VenueDetailsDialogProps> = ({
       return data;
     },
     enabled: open && !!venueId,
+  });
+
+  // Delete mutation
+  const deleteVenue = useMutation({
+    mutationFn: async () => {
+      // Check for related bookings
+      const { data: bookings, error: bookingsError } = await supabase
+        .from('bookings')
+        .select('id')
+        .eq('venue_id', venueId);
+
+      if (bookingsError) throw bookingsError;
+      
+      if (bookings && bookings.length > 0) {
+        throw new Error('This venue cannot be deleted as it has associated bookings.');
+      }
+      
+      // Delete the venue if no bookings are found
+      const { error } = await supabase
+        .from('venues')
+        .delete()
+        .eq('id', venueId);
+
+      if (error) throw error;
+      
+      return { success: true };
+    },
+    onSuccess: () => {
+      toast({
+        title: 'Venue Deleted',
+        description: 'The venue has been deleted successfully.',
+      });
+      queryClient.invalidateQueries({ queryKey: ['venues'] });
+      onOpenChange(false);
+    },
+    onError: (error: any) => {
+      toast({
+        title: 'Error',
+        description: error.message || 'There was a problem deleting the venue.',
+        variant: 'destructive',
+      });
+    },
   });
   
   // Mock multiple images for the slider (in a real app, these would come from the venue)
@@ -60,6 +117,15 @@ const VenueDetailsDialog: React.FC<VenueDetailsDialogProps> = ({
     );
   };
 
+  const handleDelete = () => {
+    setIsDeleteDialogOpen(true);
+  };
+
+  const handleDeleteConfirm = () => {
+    setIsDeleteDialogOpen(false);
+    deleteVenue.mutate();
+  };
+
   if (isLoading) {
     return (
       <Dialog open={open} onOpenChange={onOpenChange}>
@@ -75,112 +141,169 @@ const VenueDetailsDialog: React.FC<VenueDetailsDialogProps> = ({
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[600px]">
-        <DialogHeader>
-          <DialogTitle>{venue.name}</DialogTitle>
-          <DialogDescription>
-            Detailed information about this venue
-          </DialogDescription>
-        </DialogHeader>
-
-        <div className="relative h-56 w-full overflow-hidden rounded-lg">
-          {/* Image slider */}
-          <div className="w-full h-full">
-            <img
-              src={mockImages[currentImageIndex]}
-              alt={`${venue.name} - Image ${currentImageIndex + 1}`}
-              className="w-full h-full object-cover"
-            />
-          </div>
-          
-          {/* Navigation buttons */}
-          <div className="absolute top-0 left-0 w-full h-full flex justify-between items-center">
-            <Button
-              variant="ghost"
-              size="icon"
-              className="bg-black/30 hover:bg-black/50 text-white rounded-full h-8 w-8"
-              onClick={prevImage}
-            >
-              <ChevronLeft className="h-5 w-5" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="bg-black/30 hover:bg-black/50 text-white rounded-full h-8 w-8"
-              onClick={nextImage}
-            >
-              <ChevronRight className="h-5 w-5" />
-            </Button>
-          </div>
-          
-          {/* Image indicator dots */}
-          <div className="absolute bottom-2 left-0 right-0 flex justify-center space-x-2">
-            {mockImages.map((_, index) => (
-              <div
-                key={index}
-                className={`h-2 w-2 rounded-full ${
-                  currentImageIndex === index ? 'bg-white' : 'bg-white/50'
-                }`}
-              />
-            ))}
-          </div>
-        </div>
-
-        <div className="space-y-4">
-          <div className="flex flex-wrap gap-2 items-center">
-            <Badge variant="outline" className="flex items-center">
-              <Users className="mr-1 h-3 w-3" />
-              Capacity: {venue.capacity}
-            </Badge>
-            <Badge variant="outline" className="flex items-center">
-              <Maximize2 className="mr-1 h-3 w-3" />
-              {venue.square_footage} sq ft
-            </Badge>
-            <Badge variant="outline" className="flex items-center">
-              <DollarSign className="mr-1 h-3 w-3" />
-              ${venue.hourly_rate}/hour
-            </Badge>
-            <Badge 
-              variant={venue.availability === 'available' ? 'default' : 'secondary'}
-              className="flex items-center"
-            >
-              <CalendarCheck className="mr-1 h-3 w-3" />
-              {venue.availability === 'available' ? 'Available' : venue.availability}
-            </Badge>
-          </div>
-
-          <div>
-            <h3 className="text-sm font-medium mb-1">Description</h3>
-            <p className="text-sm text-muted-foreground">
-              {venue.description || 'No description available.'}
-            </p>
-          </div>
-
-          {venue.features && venue.features.length > 0 && (
-            <div>
-              <h3 className="text-sm font-medium mb-1">Features</h3>
-              <div className="flex flex-wrap gap-1">
-                {venue.features.map((feature, index) => (
-                  <Badge key={index} variant="secondary" className="text-xs">
-                    {feature}
-                  </Badge>
-                ))}
+    <>
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent className="sm:max-w-[600px]">
+          <DialogHeader>
+            <div className="flex items-center justify-between">
+              <DialogTitle>{venue.name}</DialogTitle>
+              <div className="flex space-x-2">
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={() => setIsEditModalOpen(true)}
+                >
+                  <Edit className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="text-red-500 hover:text-red-600"
+                  onClick={handleDelete}
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
               </div>
             </div>
-          )}
+            <DialogDescription>
+              Detailed information about this venue
+            </DialogDescription>
+          </DialogHeader>
 
-          <div className="flex justify-between text-xs text-muted-foreground">
-            <span>
-              Created: {new Date(venue.created_at || '').toLocaleDateString()}
-            </span>
-            <span>
-              Last updated: {new Date(venue.updated_at || '').toLocaleDateString()}
-            </span>
+          <div className="relative h-56 w-full overflow-hidden rounded-lg">
+            {/* Image slider */}
+            <div className="w-full h-full">
+              <img
+                src={mockImages[currentImageIndex]}
+                alt={`${venue.name} - Image ${currentImageIndex + 1}`}
+                className="w-full h-full object-cover"
+              />
+            </div>
+            
+            {/* Navigation buttons */}
+            <div className="absolute top-0 left-0 w-full h-full flex justify-between items-center">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="bg-black/30 hover:bg-black/50 text-white rounded-full h-8 w-8"
+                onClick={prevImage}
+              >
+                <ChevronLeft className="h-5 w-5" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="bg-black/30 hover:bg-black/50 text-white rounded-full h-8 w-8"
+                onClick={nextImage}
+              >
+                <ChevronRight className="h-5 w-5" />
+              </Button>
+            </div>
+            
+            {/* Image indicator dots */}
+            <div className="absolute bottom-2 left-0 right-0 flex justify-center space-x-2">
+              {mockImages.map((_, index) => (
+                <div
+                  key={index}
+                  className={`h-2 w-2 rounded-full ${
+                    currentImageIndex === index ? 'bg-white' : 'bg-white/50'
+                  }`}
+                />
+              ))}
+            </div>
           </div>
-        </div>
-      </DialogContent>
-    </Dialog>
+
+          <div className="space-y-4">
+            <div className="flex flex-wrap gap-2 items-center">
+              <Badge variant="outline" className="flex items-center">
+                <Users className="mr-1 h-3 w-3" />
+                Capacity: {venue.capacity}
+              </Badge>
+              <Badge variant="outline" className="flex items-center">
+                <Maximize2 className="mr-1 h-3 w-3" />
+                {venue.square_footage} sq ft
+              </Badge>
+              <Badge variant="outline" className="flex items-center">
+                <DollarSign className="mr-1 h-3 w-3" />
+                ${venue.hourly_rate}/hour
+              </Badge>
+              {venue.location && (
+                <Badge variant="outline" className="flex items-center">
+                  <MapPin className="mr-1 h-3 w-3" />
+                  {venue.location}
+                </Badge>
+              )}
+              <Badge 
+                variant={venue.availability === 'available' ? 'default' : 'secondary'}
+                className="flex items-center"
+              >
+                <CalendarCheck className="mr-1 h-3 w-3" />
+                {venue.availability === 'available' ? 'Available' : venue.availability}
+              </Badge>
+            </div>
+
+            <div>
+              <h3 className="text-sm font-medium mb-1">Description</h3>
+              <p className="text-sm text-muted-foreground">
+                {venue.description || 'No description available.'}
+              </p>
+            </div>
+
+            {venue.features && venue.features.length > 0 && (
+              <div>
+                <h3 className="text-sm font-medium mb-1">Features</h3>
+                <div className="flex flex-wrap gap-1">
+                  {venue.features.map((feature: string, index: number) => (
+                    <Badge key={index} variant="secondary" className="text-xs">
+                      {feature}
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <div className="flex justify-between text-xs text-muted-foreground">
+              <span>
+                Created: {new Date(venue.created_at || '').toLocaleDateString()}
+              </span>
+              <span>
+                Last updated: {new Date(venue.updated_at || '').toLocaleDateString()}
+              </span>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit modal */}
+      <VenueModal
+        open={isEditModalOpen}
+        onOpenChange={setIsEditModalOpen}
+        venue={venue}
+        isEditing={true}
+      />
+
+      {/* Delete confirmation dialog */}
+      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently delete the venue
+              and remove its data from our servers.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-red-600 hover:bg-red-700"
+              onClick={handleDeleteConfirm}
+            >
+              {deleteVenue.isPending ? 'Deleting...' : 'Delete Venue'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 };
 

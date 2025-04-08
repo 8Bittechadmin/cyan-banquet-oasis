@@ -6,7 +6,7 @@ import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/componen
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import { Calendar, Plus, Users, Square, Clock } from 'lucide-react';
+import { Calendar, Plus, Users, Square, Clock, MapPin } from 'lucide-react';
 import VenueModal from '@/components/Venues/VenueModal';
 import VenueDetailsDialog from '@/components/Venues/VenueDetailsDialog';
 import { useQuery } from '@tanstack/react-query';
@@ -132,10 +132,16 @@ const Venues: React.FC = () => {
                         <Square className="h-4 w-4 text-gray-500" />
                         <span>{venue.square_footage} sq ft</span>
                       </div>
-                      <div className="flex items-center gap-1 col-span-2">
+                      <div className="flex items-center gap-1">
                         <Clock className="h-4 w-4 text-gray-500" />
                         <span>${venue.hourly_rate}/hour</span>
                       </div>
+                      {venue.location && (
+                        <div className="flex items-center gap-1">
+                          <MapPin className="h-4 w-4 text-gray-500" />
+                          <span>{venue.location}</span>
+                        </div>
+                      )}
                     </div>
                   </CardContent>
                   <CardFooter className="pt-0">

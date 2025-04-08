@@ -25,6 +25,7 @@ const VenueForm: React.FC<VenueFormProps> = ({
     square_footage: 1,
     hourly_rate: 1,
     description: '',
+    location: '',
     availability: 'available',
     image_url: 'https://images.unsplash.com/photo-1519167758481-83f550bb49b3?q=80&w=500&auto=format&fit=crop',
     features: [],
@@ -69,6 +70,13 @@ const VenueForm: React.FC<VenueFormProps> = ({
           label="Hourly Rate"
           type="number"
           placeholder="Enter hourly rate"
+        />
+        
+        <InputField
+          form={form}
+          name="location"
+          label="Location"
+          placeholder="Enter venue location"
         />
         
         <TextareaField

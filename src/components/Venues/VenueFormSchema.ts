@@ -7,6 +7,7 @@ export const VenueFormSchema = z.object({
   square_footage: z.number().min(1, 'Square footage must be at least 1'),
   hourly_rate: z.number().min(0, 'Hourly rate must be at least 0'),
   description: z.string().min(1, 'Description is required'),
+  location: z.string().min(1, 'Location is required'),
   availability: z.enum(['available', 'booked', 'maintenance']),
   image_url: z.string().optional(),
   features: z.array(z.string()).optional().default([]),

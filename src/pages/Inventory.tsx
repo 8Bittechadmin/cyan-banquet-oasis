@@ -2,13 +2,13 @@
 import React, { useState } from 'react';
 import AppLayout from '@/components/AppLayout';
 import PageHeader from '@/components/PageHeader';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
-import { Search, Plus, Filter, AlertTriangle } from 'lucide-react';
+import { Search, Plus, Filter, AlertTriangle, Archive, Package } from 'lucide-react';
 import AddInventoryItemModal from '@/components/Inventory/AddInventoryItemModal';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -72,8 +72,9 @@ const Inventory: React.FC = () => {
   
   // Calculate statistics
   const totalItems = inventoryItems?.length || 0;
-  const itemsInUse = inventoryItems?.filter(item => item.quantity < item.min_quantity).length || 0;
+  const itemsInStock = inventoryItems?.filter(item => item.status === 'in-stock').length || 0;
   const lowStockAlerts = inventoryItems?.filter(item => item.status === 'low').length || 0;
+  const outOfStock = inventoryItems?.filter(item => item.status === 'out').length || 0;
   
   return (
     <AppLayout>
@@ -87,7 +88,7 @@ const Inventory: React.FC = () => {
         }}
       />
       
-      <div className="grid gap-6 md:grid-cols-3 mb-6">
+      <div className="grid gap-6 md:grid-cols-4 mb-6">
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium">Total Items</CardTitle>
@@ -99,11 +100,16 @@ const Inventory: React.FC = () => {
         </Card>
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">Items In Use</CardTitle>
+            <CardTitle className="text-sm font-medium">Items In Stock</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{itemsInUse}</div>
-            <p className="text-xs text-muted-foreground mt-1">{Math.round((itemsInUse / totalItems) * 100) || 0}% of inventory</p>
+            <div className="flex items-center">
+              <div className="text-2xl font-bold">{itemsInStock}</div>
+              <Badge variant="outline" className="ml-2 bg-green-50 text-green-600 border-green-200">
+                <Package className="h-3 w-3 mr-1" /> Available
+              </Badge>
+            </div>
+            <p className="text-xs text-muted-foreground mt-1">{Math.round((itemsInStock / totalItems) * 100) || 0}% of inventory</p>
           </CardContent>
         </Card>
         <Card>
@@ -118,6 +124,20 @@ const Inventory: React.FC = () => {
               </Badge>
             </div>
             <p className="text-xs text-muted-foreground mt-1">Items need restock</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium">Out of Stock</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center">
+              <div className="text-2xl font-bold">{outOfStock}</div>
+              <Badge variant="outline" className="ml-2 bg-red-50 text-red-600 border-red-200">
+                <Archive className="h-3 w-3 mr-1" /> Order Required
+              </Badge>
+            </div>
+            <p className="text-xs text-muted-foreground mt-1">Items unavailable</p>
           </CardContent>
         </Card>
       </div>
