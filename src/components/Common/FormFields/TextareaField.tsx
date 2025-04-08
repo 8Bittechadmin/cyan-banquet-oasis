@@ -10,8 +10,8 @@ interface TextareaFieldProps {
   label: string;
   placeholder?: string;
   className?: string;
-  value?: string; // Added value prop
-  onChange?: (e: React.ChangeEvent<HTMLTextAreaElement>) => void; // Added onChange prop
+  value?: string;
+  onChange?: (e: React.ChangeEvent<HTMLTextAreaElement>) => void;
 }
 
 export const TextareaField: React.FC<TextareaFieldProps> = ({

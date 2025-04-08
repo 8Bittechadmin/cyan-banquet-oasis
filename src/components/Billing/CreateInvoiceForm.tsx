@@ -26,12 +26,13 @@ type CreateInvoiceFormProps = {
   onSubmit: (values: InvoiceFormValues & { total_amount: number }) => void;
   isSubmitting: boolean;
   onCancel: () => void;
+  initialData?: Partial<InvoiceFormValues>;
 }
 
-export function CreateInvoiceForm({ onSubmit, isSubmitting, onCancel }: CreateInvoiceFormProps) {
+export function CreateInvoiceForm({ onSubmit, isSubmitting, onCancel, initialData }: CreateInvoiceFormProps) {
   const form = useForm<InvoiceFormValues>({
     resolver: zodResolver(invoiceFormSchema),
-    defaultValues: {
+    defaultValues: initialData || {
       invoice_number: `INV-${new Date().getFullYear()}-${String(Math.floor(Math.random() * 10000)).padStart(4, '0')}`,
       issue_date: new Date().toISOString(),
       due_date: '',
@@ -41,16 +42,19 @@ export function CreateInvoiceForm({ onSubmit, isSubmitting, onCancel }: CreateIn
     },
   });
   
-  const [selectedAmount, setSelectedAmount] = React.useState<number>(0);
-  const [taxRate, setTaxRate] = React.useState<number>(10); // Default 10% tax
+  const [taxRate, setTaxRate] = React.useState<number>(initialData?.tax_amount && initialData.amount ? 
+    (initialData.tax_amount / initialData.amount) * 100 : 
+    10); // Default 10% tax
   
   // Watch the amount field to calculate tax and total
   const amount = form.watch('amount');
   
   // Calculate tax amount based on tax rate
   React.useEffect(() => {
-    const calculatedTaxAmount = amount * (taxRate / 100);
-    form.setValue('tax_amount', parseFloat(calculatedTaxAmount.toFixed(2)));
+    if (amount) {
+      const calculatedTaxAmount = amount * (taxRate / 100);
+      form.setValue('tax_amount', parseFloat(calculatedTaxAmount.toFixed(2)));
+    }
   }, [amount, taxRate, form]);
   
   // Fetch bookings for dropdown
@@ -91,7 +95,7 @@ export function CreateInvoiceForm({ onSubmit, isSubmitting, onCancel }: CreateIn
   });
   
   // Calculate total amount (including tax)
-  const totalAmount = parseFloat(amount.toString()) + parseFloat((form.getValues('tax_amount') || 0).toString());
+  const totalAmount = parseFloat(amount?.toString() || "0") + parseFloat((form.getValues('tax_amount') || 0).toString());
   
   // Handle form submission with total amount
   const handleSubmitWithTotal = (values: InvoiceFormValues) => {
@@ -197,7 +201,7 @@ export function CreateInvoiceForm({ onSubmit, isSubmitting, onCancel }: CreateIn
             Cancel
           </Button>
           <Button type="submit" disabled={isSubmitting}>
-            {isSubmitting ? 'Creating...' : 'Create Invoice'}
+            {isSubmitting ? 'Saving...' : initialData ? 'Update Invoice' : 'Create Invoice'}
           </Button>
         </div>
       </form>

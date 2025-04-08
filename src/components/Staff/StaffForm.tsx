@@ -13,23 +13,28 @@ interface StaffFormProps {
   isSubmitting: boolean;
   onCancel: () => void;
   defaultValues?: Partial<StaffFormValues>;
+  initialData?: Partial<StaffFormValues>; // Added to support both naming conventions
 }
 
 const StaffForm: React.FC<StaffFormProps> = ({
   onSubmit,
   isSubmitting,
   onCancel,
-  defaultValues = {
+  defaultValues,
+  initialData
+}) => {
+  // Use initialData if provided, otherwise use defaultValues, or fallback to defaults
+  const formDefaults = initialData || defaultValues || {
     name: '',
     position: '',
     department: 'Service',
     contact: '',
     status: 'available',
-  },
-}) => {
+  };
+
   const form = useForm<StaffFormValues>({
     resolver: zodResolver(StaffFormSchema),
-    defaultValues: defaultValues as StaffFormValues,
+    defaultValues: formDefaults as StaffFormValues,
   });
 
   return (
