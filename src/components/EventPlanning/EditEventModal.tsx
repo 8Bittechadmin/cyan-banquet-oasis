@@ -1,11 +1,13 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import FormModal from '@/components/Common/FormModal';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import CreateEventForm from './CreateEventForm';
-import { Button } from '@/components/ui/button'; // Added missing Button import
+import { Button } from '@/components/ui/button';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { AlertCircle } from 'lucide-react'; 
 
 interface EditEventModalProps {
   open: boolean;
@@ -19,6 +21,7 @@ const EditEventModal: React.FC<EditEventModalProps> = ({
   event
 }) => {
   const queryClient = useQueryClient();
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   const updateEvent = useMutation({
     mutationFn: async (values: any) => {
@@ -59,16 +62,56 @@ const EditEventModal: React.FC<EditEventModalProps> = ({
     },
   });
 
+  const checkRelatedInvoices = async () => {
+    if (!event) return false;
+    
+    const { data, error } = await supabase
+      .from('invoices')
+      .select('id')
+      .eq('booking_id', event.id);
+      
+    if (error) {
+      throw error;
+    }
+    
+    return data && data.length > 0;
+  };
+  
+  const deleteRelatedInvoices = async () => {
+    const { error } = await supabase
+      .from('invoices')
+      .delete()
+      .eq('booking_id', event.id);
+      
+    if (error) throw error;
+  };
+
   const deleteEvent = useMutation({
     mutationFn: async () => {
       if (!event) throw new Error('No event selected');
       
-      const { error } = await supabase
-        .from('bookings')
-        .delete()
-        .eq('id', event.id);
+      setDeleteError(null);
+      
+      try {
+        // Check for related invoices
+        const hasInvoices = await checkRelatedInvoices();
+        
+        if (hasInvoices) {
+          // Delete related invoices first
+          await deleteRelatedInvoices();
+        }
+        
+        // Now delete the event/booking
+        const { error } = await supabase
+          .from('bookings')
+          .delete()
+          .eq('id', event.id);
 
-      if (error) throw error;
+        if (error) throw error;
+      } catch (error: any) {
+        setDeleteError(error.message);
+        throw error;
+      }
     },
     onSuccess: () => {
       toast({
@@ -92,7 +135,7 @@ const EditEventModal: React.FC<EditEventModalProps> = ({
   };
 
   const handleDelete = () => {
-    if (window.confirm('Are you sure you want to delete this event? This action cannot be undone.')) {
+    if (window.confirm('Are you sure you want to delete this event? This action will also delete any related invoices and cannot be undone.')) {
       deleteEvent.mutate();
     }
   };
@@ -107,6 +150,15 @@ const EditEventModal: React.FC<EditEventModalProps> = ({
     >
       {event && (
         <>
+          {deleteError && (
+            <Alert variant="destructive" className="mb-4">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>
+                {deleteError}
+              </AlertDescription>
+            </Alert>
+          )}
+          
           <CreateEventForm
             onSubmit={handleSubmit}
             isSubmitting={updateEvent.isPending}

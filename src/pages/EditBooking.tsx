@@ -23,11 +23,14 @@ import { supabase } from '@/integrations/supabase/client';
 import BookingFormFields from '@/components/Bookings/BookingFormFields';
 import { BookingFormSchema, type BookingFormValues } from '@/components/Bookings/BookingFormSchema';
 import { ArrowLeft, Trash2 } from 'lucide-react';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { AlertCircle } from 'lucide-react';
 
 const EditBooking = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const [deleteError, setDeleteError] = React.useState<string | null>(null);
   
   const { data: booking, isLoading } = useQuery({
     queryKey: ['booking', id],
@@ -121,14 +124,54 @@ const EditBooking = () => {
     },
   });
 
+  const checkRelatedInvoices = async () => {
+    if (!id) return false;
+    
+    const { data, error } = await supabase
+      .from('invoices')
+      .select('id')
+      .eq('booking_id', id);
+      
+    if (error) {
+      throw error;
+    }
+    
+    return data && data.length > 0;
+  };
+  
+  const deleteRelatedInvoices = async () => {
+    const { error } = await supabase
+      .from('invoices')
+      .delete()
+      .eq('booking_id', id);
+      
+    if (error) throw error;
+  };
+
   const deleteBooking = useMutation({
     mutationFn: async () => {
-      const { error } = await supabase
-        .from('bookings')
-        .delete()
-        .eq('id', id);
+      setDeleteError(null);
+      
+      try {
+        // Check for related invoices
+        const hasInvoices = await checkRelatedInvoices();
         
-      if (error) throw error;
+        if (hasInvoices) {
+          // Delete related invoices first
+          await deleteRelatedInvoices();
+        }
+        
+        // Now delete the booking
+        const { error } = await supabase
+          .from('bookings')
+          .delete()
+          .eq('id', id);
+          
+        if (error) throw error;
+      } catch (error: any) {
+        setDeleteError(error.message);
+        throw error;
+      }
     },
     onSuccess: () => {
       toast({
@@ -152,7 +195,7 @@ const EditBooking = () => {
   }
 
   function handleDelete() {
-    if (window.confirm('Are you sure you want to delete this booking? This action cannot be undone.')) {
+    if (window.confirm('Are you sure you want to delete this booking? This action will also delete any related invoices and cannot be undone.')) {
       deleteBooking.mutate();
     }
   }
@@ -212,6 +255,17 @@ const EditBooking = () => {
         </CardHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)}>
+            {deleteError && (
+              <div className="px-6">
+                <Alert variant="destructive">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertDescription>
+                    {deleteError}
+                  </AlertDescription>
+                </Alert>
+              </div>
+            )}
+            
             <BookingFormFields form={form} />
             
             <CardFooter className="flex justify-between">
