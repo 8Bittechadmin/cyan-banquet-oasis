@@ -1,6 +1,5 @@
 
 import React from 'react';
-import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import { useNavigate } from 'react-router-dom';
@@ -34,8 +33,7 @@ const BookingForm = () => {
       event_type: '',
       venue_id: '',
       client_id: '',
-      start_date: '',
-      end_date: '',
+      start_date: new Date(),
       guest_count: 1,
       deposit_paid: false,
       status: 'pending',
@@ -51,8 +49,8 @@ const BookingForm = () => {
           event_type: values.event_type,
           venue_id: values.venue_id,
           client_id: values.client_id,
-          start_date: values.start_date,
-          end_date: values.end_date,
+          start_date: values.start_date.toISOString(),
+          end_date: values.end_date ? values.end_date.toISOString() : null,
           guest_count: values.guest_count,
           total_amount: values.total_amount || null,
           deposit_amount: values.deposit_amount || null,

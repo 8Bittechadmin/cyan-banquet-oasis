@@ -130,6 +130,9 @@ const VenueDetailsDialog: React.FC<VenueDetailsDialogProps> = ({
     return (
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent className="sm:max-w-[600px]">
+          <DialogHeader>
+            <DialogTitle>Venue Details</DialogTitle>
+          </DialogHeader>
           <div className="py-8 text-center">Loading venue details...</div>
         </DialogContent>
       </Dialog>
