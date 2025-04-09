@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { useQuery, useMutation } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import AppLayout from '@/components/AppLayout';
 import PageHeader from '@/components/PageHeader';
@@ -10,19 +10,26 @@ import ProgressBar from '@/components/ProgressBar';
 import { 
   Calendar,
   CalendarPlus,
-  Users
+  Users,
+  Trash2, // Add trash icon
+  X
 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { ViewCalendarButton, CheckAvailabilityButton } from '@/components/Dashboard/ActionButtons';
 import { AddTaskModal } from '@/components/Tasks/AddTaskModal';
+import DeleteActionConfirmDialog from '@/components/Dashboard/DeleteActionConfirmDialog';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { Checkbox } from '@/components/ui/checkbox';
 
 const Dashboard = () => {
   const [isAddTaskModalOpen, setIsAddTaskModalOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [itemToDelete, setItemToDelete] = useState<{ id: string, type: 'task' | 'notification' } | null>(null);
+  
+  const queryClient = useQueryClient();
   const navigate = useNavigate();
   
   // Fetch real dashboard stats from Supabase
@@ -90,7 +97,7 @@ const Dashboard = () => {
   });
 
   // Fetch notifications from Supabase
-  const { data: notifications = [] } = useQuery({
+  const { data: notifications = [], isLoading: isLoadingNotifications } = useQuery({
     queryKey: ['dashboardNotifications'],
     queryFn: async () => {
       const { data } = await supabase.from('dashboard_notifications')
@@ -102,7 +109,7 @@ const Dashboard = () => {
   });
 
   // Fetch tasks
-  const { data: tasks, refetch: refetchTasks } = useQuery({
+  const { data: tasks, isLoading: isLoadingTasks } = useQuery({
     queryKey: ['tasks'],
     queryFn: async () => {
       const { data } = await supabase
@@ -125,7 +132,7 @@ const Dashboard = () => {
       if (error) throw error;
     },
     onSuccess: () => {
-      refetchTasks();
+      queryClient.invalidateQueries({ queryKey: ['tasks'] });
     },
     onError: (error) => {
       toast({
@@ -136,9 +143,53 @@ const Dashboard = () => {
     }
   });
 
+  // Delete task or notification mutation
+  const deleteItemMutation = useMutation({
+    mutationFn: async ({ id, type }: { id: string, type: 'task' | 'notification' }) => {
+      const table = type === 'task' ? 'tasks' : 'dashboard_notifications';
+      const { error } = await supabase
+        .from(table)
+        .delete()
+        .eq('id', id);
+      
+      if (error) throw error;
+      return { id, type };
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ 
+        queryKey: [data.type === 'task' ? 'tasks' : 'dashboardNotifications'] 
+      });
+      toast({
+        title: `${data.type === 'task' ? 'Task' : 'Notification'} deleted`,
+        description: `The ${data.type} has been successfully deleted.`,
+      });
+      setDeleteDialogOpen(false);
+      setItemToDelete(null);
+    },
+    onError: (error) => {
+      toast({
+        title: "Error deleting item",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  });
+
   // Handle task completion toggle
   const toggleTaskCompletion = async (taskId: string, completed: boolean) => {
     toggleTaskMutation.mutate({ id: taskId, completed });
+  };
+
+  // Handle deletion of task or notification
+  const handleDelete = (id: string, type: 'task' | 'notification') => {
+    setItemToDelete({ id, type });
+    setDeleteDialogOpen(true);
+  };
+
+  const confirmDelete = () => {
+    if (itemToDelete) {
+      deleteItemMutation.mutate(itemToDelete);
+    }
   };
 
   const handleAddNewBooking = () => {
@@ -497,9 +548,13 @@ const Dashboard = () => {
               <CardContent className="pt-4 px-0">
                 <TabsContent value="tasks" className="mt-0 space-y-4">
                   <div className="space-y-3">
-                    {tasks && tasks.length > 0 ? (
+                    {isLoadingTasks ? (
+                      <div className="text-center py-2 text-sm text-gray-500">
+                        Loading tasks...
+                      </div>
+                    ) : tasks && tasks.length > 0 ? (
                       tasks.map((task) => (
-                        <div key={task.id} className="flex items-start gap-2">
+                        <div key={task.id} className="flex items-start gap-2 group">
                           <Checkbox 
                             id={`task-${task.id}`}
                             checked={task.status === 'completed'}
@@ -507,10 +562,18 @@ const Dashboard = () => {
                           />
                           <label 
                             htmlFor={`task-${task.id}`} 
-                            className={`text-sm ${task.status === 'completed' ? 'line-through text-gray-500' : ''}`}
+                            className={`text-sm flex-grow ${task.status === 'completed' ? 'line-through text-gray-500' : ''}`}
                           >
                             {task.title}
                           </label>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
+                            onClick={() => handleDelete(task.id, 'task')}
+                          >
+                            <Trash2 className="h-4 w-4 text-gray-500 hover:text-red-500" />
+                          </Button>
                         </div>
                       ))
                     ) : (
@@ -532,10 +595,24 @@ const Dashboard = () => {
                 
                 <TabsContent value="notifications" className="mt-0">
                   <div className="space-y-3">
-                    {notifications && notifications.length > 0 ? (
+                    {isLoadingNotifications ? (
+                      <div className="text-center py-2 text-sm text-gray-500">
+                        Loading notifications...
+                      </div>
+                    ) : notifications && notifications.length > 0 ? (
                       notifications.map((item) => (
-                        <div key={item.id} className="border-b border-gray-100 pb-3 last:border-0 last:pb-0">
-                          <h4 className="text-sm font-medium">{item.title}</h4>
+                        <div key={item.id} className="border-b border-gray-100 pb-3 last:border-0 last:pb-0 group">
+                          <div className="flex justify-between">
+                            <h4 className="text-sm font-medium">{item.title}</h4>
+                            <Button
+                              variant="ghost" 
+                              size="icon"
+                              className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
+                              onClick={() => handleDelete(item.id, 'notification')}
+                            >
+                              <X className="h-4 w-4 text-gray-500 hover:text-red-500" />
+                            </Button>
+                          </div>
                           <p className="text-xs text-muted-foreground">{item.description}</p>
                           <span className="text-xs text-gray-400 mt-1">{item.time}</span>
                         </div>
@@ -608,6 +685,14 @@ const Dashboard = () => {
       <AddTaskModal 
         open={isAddTaskModalOpen}
         onOpenChange={setIsAddTaskModalOpen}
+      />
+      
+      <DeleteActionConfirmDialog
+        open={deleteDialogOpen}
+        onOpenChange={setDeleteDialogOpen}
+        onConfirm={confirmDelete}
+        isDeleting={deleteItemMutation.isPending}
+        itemType={itemToDelete?.type || 'task'}
       />
     </AppLayout>
   );

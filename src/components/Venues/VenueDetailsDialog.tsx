@@ -91,10 +91,10 @@ const VenueDetailsDialog: React.FC<VenueDetailsDialogProps> = ({ venueId, open, 
                     <span>${venue.hourly_rate}/hour</span>
                   </div>
                   {/* Only render location if it exists */}
-                  {'location' in venue && venue.location && (
+                  {venue.location && (
                     <div className="flex items-center gap-1">
                       <MapPin className="h-4 w-4 text-gray-500" />
-                      <span>{venue.location}</span>
+                      <span>{venue.location as string}</span>
                     </div>
                   )}
                   <div className="flex items-center gap-1">

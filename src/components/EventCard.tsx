@@ -34,7 +34,7 @@ const EventCard: React.FC<EventCardProps> = ({
     <div className={`event-card ${className}`}>
       <div className="flex justify-between items-start">
         <h3 className="font-semibold">{title}</h3>
-        <EventStatusBadge status={status} />
+        <EventStatusBadge status={status as any} />
       </div>
       
       <div className="text-sm text-muted-foreground mb-2">
