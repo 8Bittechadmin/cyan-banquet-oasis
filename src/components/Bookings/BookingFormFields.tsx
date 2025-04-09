@@ -1,14 +1,19 @@
 
 import React, { useState, useEffect } from 'react';
 import { CardContent, CardFooter } from '@/components/ui/card';
-import { InputField, SelectField, TextareaField, CheckboxField, DateTimeField } from '@/components/Common/FormFields';
+import { InputField, SelectField, TextareaField, CheckboxField } from '@/components/Common/FormFields';
 import { UseFormReturn } from 'react-hook-form';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { BookingFormValues } from './BookingFormSchema';
 import QuickAddClient from './QuickAddClient';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { AlertCircle } from 'lucide-react';
+import { AlertCircle, X } from 'lucide-react';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Button } from '@/components/ui/button';
+import { Calendar } from '@/components/ui/calendar';
+import { format } from 'date-fns';
+import { DialogClose } from '@/components/ui/dialog';
 
 interface BookingFormFieldsProps {
   form: UseFormReturn<BookingFormValues>;
@@ -19,6 +24,8 @@ const BookingFormFields: React.FC<BookingFormFieldsProps> = ({ form }) => {
   const [venueOptions, setVenueOptions] = useState<{ value: string; label: string; }[]>([]);
   const [depositAmount, setDepositAmount] = useState<number | undefined>(form.getValues('deposit_amount'));
   const [totalAmount, setTotalAmount] = useState<number | undefined>(form.getValues('total_amount'));
+  const [startDateOpen, setStartDateOpen] = useState(false);
+  const [endDateOpen, setEndDateOpen] = useState(false);
 
   // Query to get all clients
   const { data: clients = [], isLoading: isClientsLoading } = useQuery({
@@ -109,8 +116,27 @@ const BookingFormFields: React.FC<BookingFormFieldsProps> = ({ form }) => {
     { value: 'cancelled', label: 'Cancelled' }
   ];
 
+  // Custom date selection handlers
+  const handleStartDateSelect = (date: Date) => {
+    const startDate = new Date(date);
+    startDate.setHours(9, 0, 0, 0); // Set default time to 9:00 AM
+    form.setValue('start_date', startDate);
+  };
+
+  const handleEndDateSelect = (date: Date) => {
+    const endDate = new Date(date);
+    endDate.setHours(17, 0, 0, 0); // Set default time to 5:00 PM
+    form.setValue('end_date', endDate);
+  };
+
   return (
     <CardContent>
+      <div className="flex justify-end mb-2">
+        <DialogClose className="h-8 w-8 rounded-full hover:bg-muted flex items-center justify-center">
+          <X className="h-4 w-4" />
+        </DialogClose>
+      </div>
+      
       <div className="grid gap-6">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <InputField
@@ -152,17 +178,88 @@ const BookingFormFields: React.FC<BookingFormFieldsProps> = ({ form }) => {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <DateTimeField
-            form={form}
-            name="start_date"
-            label="Start Date & Time"
-          />
+          {/* Start Date Picker */}
+          <div>
+            <label className="text-sm font-medium">Start Date</label>
+            <Popover open={startDateOpen} onOpenChange={setStartDateOpen}>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  className="w-full justify-start text-left font-normal"
+                >
+                  {form.watch('start_date') ? (
+                    format(new Date(form.watch('start_date')), 'PPP')
+                  ) : (
+                    <span>Select start date</span>
+                  )}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <Calendar
+                  mode="single"
+                  selected={form.watch('start_date') ? new Date(form.watch('start_date')) : undefined}
+                  onSelect={(date) => {
+                    if (date) {
+                      handleStartDateSelect(date);
+                      setStartDateOpen(false);
+                    }
+                  }}
+                  initialFocus
+                />
+                <div className="p-3 border-t border-border flex justify-end">
+                  <Button 
+                    size="sm" 
+                    onClick={() => setStartDateOpen(false)}
+                  >
+                    OK
+                  </Button>
+                </div>
+              </PopoverContent>
+            </Popover>
+          </div>
 
-          <DateTimeField
-            form={form}
-            name="end_date"
-            label="End Date & Time"
-          />
+          {/* End Date Picker (Optional) */}
+          <div>
+            <div className="flex items-center gap-1">
+              <label className="text-sm font-medium">End Date</label>
+              <span className="text-xs text-muted-foreground">(Optional)</span>
+            </div>
+            <Popover open={endDateOpen} onOpenChange={setEndDateOpen}>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  className="w-full justify-start text-left font-normal"
+                >
+                  {form.watch('end_date') ? (
+                    format(new Date(form.watch('end_date')), 'PPP')
+                  ) : (
+                    <span>Select end date</span>
+                  )}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <Calendar
+                  mode="single"
+                  selected={form.watch('end_date') ? new Date(form.watch('end_date')) : undefined}
+                  onSelect={(date) => {
+                    if (date) {
+                      handleEndDateSelect(date);
+                      setEndDateOpen(false);
+                    }
+                  }}
+                  initialFocus
+                />
+                <div className="p-3 border-t border-border flex justify-end">
+                  <Button 
+                    size="sm" 
+                    onClick={() => setEndDateOpen(false)}
+                  >
+                    OK
+                  </Button>
+                </div>
+              </PopoverContent>
+            </Popover>
+          </div>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">

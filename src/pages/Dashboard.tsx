@@ -1,6 +1,7 @@
 
-import React, { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import React, { useState, useEffect } from 'react';
+import { useQuery, useMutation } from '@tanstack/react-query';
+import { useNavigate } from 'react-router-dom';
 import AppLayout from '@/components/AppLayout';
 import PageHeader from '@/components/PageHeader';
 import StatCard from '@/components/StatCard';
@@ -9,8 +10,6 @@ import ProgressBar from '@/components/ProgressBar';
 import { 
   Calendar,
   CalendarPlus,
-  DollarSign,
-  PlusCircle,
   Users
 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -18,51 +17,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { ViewCalendarButton, CheckAvailabilityButton } from '@/components/Dashboard/ActionButtons';
 import { AddTaskModal } from '@/components/Tasks/AddTaskModal';
-import { useNavigate } from 'react-router-dom';
-
-// Mock data for dashboard stats to avoid TypeScript errors
-const mockDashboardStats = {
-  total_revenue: 12452,
-  bookings_this_month: 28,
-  active_venues: 4,
-  total_guests_today: 275
-};
-
-// Mock data for dashboard notifications
-const mockNotifications = [
-  {
-    id: '1',
-    title: 'New booking request',
-    description: 'Thomas Anniversary - May 15th',
-    time: '3 min ago',
-    is_read: false,
-    created_at: new Date().toISOString()
-  },
-  {
-    id: '2',
-    title: 'Payment received',
-    description: 'Invoice #3892 - Anderson Wedding',
-    time: '1 hour ago',
-    is_read: false,
-    created_at: new Date().toISOString()
-  },
-  {
-    id: '3',
-    title: 'Low inventory alert',
-    description: 'Gold linens - 12 remaining',
-    time: '2 hours ago',
-    is_read: false,
-    created_at: new Date().toISOString()
-  },
-  {
-    id: '4',
-    title: 'Client feedback',
-    description: '⭐⭐⭐⭐⭐ Brown Birthday Party',
-    time: 'Yesterday',
-    is_read: false,
-    created_at: new Date().toISOString()
-  }
-];
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from '@/hooks/use-toast';
+import { Checkbox } from '@/components/ui/checkbox';
 
 const Dashboard = () => {
   const [isAddTaskModalOpen, setIsAddTaskModalOpen] = useState(false);
@@ -73,7 +30,11 @@ const Dashboard = () => {
     queryKey: ['dashboardStats'],
     queryFn: async () => {
       // For future implementation, will fetch from Supabase
-      return mockDashboardStats;
+      return {
+        bookings_this_month: 28,
+        active_venues: 4,
+        total_guests_today: 275
+      };
     }
   });
 
@@ -81,8 +42,11 @@ const Dashboard = () => {
   const { data: notifications } = useQuery({
     queryKey: ['dashboardNotifications'],
     queryFn: async () => {
-      // For future implementation, will fetch from Supabase
-      return mockNotifications;
+      const { data } = await supabase.from('dashboard_notifications')
+        .select('*')
+        .order('created_at', { ascending: false });
+      
+      return data || [];
     }
   });
 
@@ -90,29 +54,50 @@ const Dashboard = () => {
   const { data: tasks, refetch: refetchTasks } = useQuery({
     queryKey: ['tasks'],
     queryFn: async () => {
-      // For future implementation, will fetch from Supabase
-      // Returning mock data for now
-      return [
-        {
-          id: '1',
-          title: 'Confirm menu with client',
-          completed: false
-        },
-        {
-          id: '2',
-          title: 'Order linens for Johnson event',
-          completed: true
-        },
-        {
-          id: '3',
-          title: 'Schedule staff for weekend events',
-          completed: false
-        }
-      ];
-    },
-    initialData: [] // Default to empty array while loading
+      const { data } = await supabase
+        .from('tasks')
+        .select('*')
+        .order('created_at', { ascending: false });
+      
+      return data || [];
+    }
   });
 
+  // Toggle task completion mutation
+  const toggleTaskMutation = useMutation({
+    mutationFn: async ({ id, completed }: { id: string, completed: boolean }) => {
+      const { error } = await supabase
+        .from('tasks')
+        .update({ status: completed ? 'completed' : 'pending' })
+        .eq('id', id);
+      
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      refetchTasks();
+    },
+    onError: (error) => {
+      toast({
+        title: "Error updating task",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  });
+
+  // Handle task completion toggle
+  const toggleTaskCompletion = async (taskId: string, completed: boolean) => {
+    toggleTaskMutation.mutate({ id: taskId, completed });
+  };
+
+  const handleAddNewBooking = () => {
+    navigate('/bookings/new');
+  };
+  
+  const handleViewBookings = () => {
+    navigate('/bookings');
+  };
+  
   // Mock data for events (would come from Supabase in a full implementation)
   const todaysEvents = [
     {
@@ -186,19 +171,6 @@ const Dashboard = () => {
     }
   ];
 
-  // Handle task completion toggle
-  const toggleTaskCompletion = async (taskId: string, completed: boolean) => {
-    // For future implementation, will update in Supabase
-    console.log(`Toggling task ${taskId} to ${completed ? 'completed' : 'pending'}`);
-    
-    // Refetch tasks to update the UI
-    refetchTasks();
-  };
-
-  const handleAddNewBooking = () => {
-    navigate('/bookings/new');
-  };
-  
   return (
     <AppLayout>
       <PageHeader 
@@ -211,23 +183,19 @@ const Dashboard = () => {
         }}
       />
       
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
-        <StatCard 
-          title="Total Revenue" 
-          value={isLoadingStats ? "Loading..." : `$${dashboardStats?.total_revenue.toLocaleString()}`}
-          icon={<DollarSign />} 
-          trend={{ value: 12, isPositive: true }}
-        />
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
         <StatCard 
           title="Bookings This Month" 
           value={isLoadingStats ? "Loading..." : `${dashboardStats?.bookings_this_month}`}
           icon={<Calendar />}
           trend={{ value: 4, isPositive: true }}
+          onClick={handleViewBookings}
         />
         <StatCard 
           title="Active Venues" 
           value={isLoadingStats ? "Loading..." : `${dashboardStats?.active_venues}/6`}
           icon={<Calendar />}
+          onClick={() => navigate('/venues')}
         />
         <StatCard 
           title="Total Guests Today" 
@@ -249,6 +217,13 @@ const Dashboard = () => {
                 <EventCard key={event.id} {...event} />
               ))}
             </div>
+            <Button 
+              variant="outline" 
+              className="w-full mt-4"
+              onClick={handleViewBookings}
+            >
+              View All Bookings
+            </Button>
           </CardContent>
         </Card>
         
@@ -269,13 +244,17 @@ const Dashboard = () => {
                     {tasks && tasks.length > 0 ? (
                       tasks.map((task) => (
                         <div key={task.id} className="flex items-start gap-2">
-                          <div 
-                            className={`w-5 h-5 rounded-full mt-0.5 border flex items-center justify-center cursor-pointer ${task.completed ? 'bg-cyan-100 border-cyan-500 text-cyan-500' : 'border-gray-300'}`}
-                            onClick={() => toggleTaskCompletion(task.id, !task.completed)}
+                          <Checkbox 
+                            id={`task-${task.id}`}
+                            checked={task.status === 'completed'}
+                            onCheckedChange={(checked) => toggleTaskCompletion(task.id, !!checked)}
+                          />
+                          <label 
+                            htmlFor={`task-${task.id}`} 
+                            className={`text-sm ${task.status === 'completed' ? 'line-through text-gray-500' : ''}`}
                           >
-                            {task.completed && <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>}
-                          </div>
-                          <span className={`text-sm ${task.completed ? 'line-through text-gray-500' : ''}`}>{task.title}</span>
+                            {task.title}
+                          </label>
                         </div>
                       ))
                     ) : (
@@ -291,7 +270,7 @@ const Dashboard = () => {
                     className="w-full mt-4"
                     onClick={() => setIsAddTaskModalOpen(true)}
                   >
-                    <PlusCircle size={14} className="mr-1" /> Add Task
+                    Add Task
                   </Button>
                 </TabsContent>
                 

@@ -6,7 +6,8 @@ import { VenueFormSchema, VenueFormValues, AVAILABILITY_OPTIONS } from './VenueF
 import { Form } from '@/components/ui/form';
 import { Button } from '@/components/ui/button';
 import { InputField, SelectField, TextareaField } from '@/components/Common/FormFields';
-import { DialogFooter } from '@/components/ui/dialog';
+import { DialogFooter, DialogClose } from '@/components/ui/dialog';
+import { X } from 'lucide-react';
 
 interface VenueFormProps {
   onSubmit: (values: VenueFormValues) => void;
@@ -38,7 +39,12 @@ const VenueForm: React.FC<VenueFormProps> = ({
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+      <div className="flex justify-between items-center mb-4">
+        <DialogClose className="h-8 w-8 rounded-full hover:bg-muted flex items-center justify-center">
+          <X className="h-4 w-4" />
+        </DialogClose>
+      </div>
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-3">
         <InputField
           form={form}
           name="name"
@@ -46,7 +52,7 @@ const VenueForm: React.FC<VenueFormProps> = ({
           placeholder="Enter venue name"
         />
         
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-2 gap-3">
           <InputField
             form={form}
             name="capacity"
@@ -64,26 +70,29 @@ const VenueForm: React.FC<VenueFormProps> = ({
           />
         </div>
         
-        <InputField
-          form={form}
-          name="hourly_rate"
-          label="Hourly Rate"
-          type="number"
-          placeholder="Enter hourly rate"
-        />
-        
-        <InputField
-          form={form}
-          name="location"
-          label="Location"
-          placeholder="Enter venue location"
-        />
+        <div className="grid grid-cols-2 gap-3">
+          <InputField
+            form={form}
+            name="hourly_rate"
+            label="Hourly Rate"
+            type="number"
+            placeholder="Enter hourly rate"
+          />
+          
+          <InputField
+            form={form}
+            name="location"
+            label="Location"
+            placeholder="Enter venue location"
+          />
+        </div>
         
         <TextareaField
           form={form}
           name="description"
-          label="Description"
+          label="Description (Optional)"
           placeholder="Enter venue description"
+          required={false}
         />
         
         <InputField

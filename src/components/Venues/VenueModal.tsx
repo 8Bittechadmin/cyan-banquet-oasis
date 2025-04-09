@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -33,18 +33,42 @@ export const VenueModal: React.FC<VenueModalProps> = ({
     setIsSubmitting(true);
     
     try {
+      // Check if venue has active bookings to determine availability
+      let availability = values.availability;
+      
       if (isEditing && venue) {
+        // Check for active bookings if trying to set as available
+        if (values.availability === 'available') {
+          const now = new Date().toISOString();
+          const { data: activeBookings } = await supabase
+            .from('bookings')
+            .select('id')
+            .eq('venue_id', venue.id)
+            .gt('end_date', now)
+            .eq('status', 'confirmed')
+            .limit(1);
+          
+          if (activeBookings && activeBookings.length > 0) {
+            // If there are active bookings, override availability
+            availability = 'booked';
+            toast({
+              title: "Availability Adjusted",
+              description: "This venue has active bookings, so it's been marked as 'Booked'.",
+            });
+          }
+        }
+        
         // Update existing venue
         const { error } = await supabase
           .from('venues')
           .update({
             name: values.name,
-            description: values.description,
+            description: values.description || null,
             capacity: values.capacity,
             square_footage: values.square_footage,
             hourly_rate: values.hourly_rate,
             location: values.location,
-            availability: values.availability,
+            availability: availability,
             image_url: values.image_url,
             features: values.features,
             updated_at: new Date().toISOString(),
@@ -63,12 +87,12 @@ export const VenueModal: React.FC<VenueModalProps> = ({
           .from('venues')
           .insert({
             name: values.name,
-            description: values.description,
+            description: values.description || null,
             capacity: values.capacity,
             square_footage: values.square_footage,
             hourly_rate: values.hourly_rate,
             location: values.location,
-            availability: values.availability,
+            availability: availability,
             image_url: values.image_url,
             features: values.features
           });
@@ -99,7 +123,7 @@ export const VenueModal: React.FC<VenueModalProps> = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[600px]">
+      <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
           <DialogTitle>{isEditing ? 'Edit Venue' : 'Add New Venue'}</DialogTitle>
           <DialogDescription>
