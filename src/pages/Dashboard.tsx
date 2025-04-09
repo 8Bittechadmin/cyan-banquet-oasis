@@ -25,20 +25,71 @@ const Dashboard = () => {
   const [isAddTaskModalOpen, setIsAddTaskModalOpen] = useState(false);
   const navigate = useNavigate();
   
-  // Use mock data for now
+  // Fetch real dashboard stats from Supabase
   const { data: dashboardStats, isLoading: isLoadingStats } = useQuery({
     queryKey: ['dashboardStats'],
     queryFn: async () => {
-      // For future implementation, will fetch from Supabase
-      return {
-        bookings_this_month: 28,
-        active_venues: 4,
-        total_guests_today: 275
-      };
+      const { data: statsData, error: statsError } = await supabase
+        .from('dashboard_stats')
+        .select('*')
+        .single();
+      
+      if (statsError) {
+        console.error('Error fetching dashboard stats:', statsError);
+        // Return default values if there's an error
+        return {
+          bookings_this_month: 0,
+          active_venues: 0,
+          total_guests_today: 0
+        };
+      }
+      
+      // If no data exists, let's fetch real counts from the respective tables
+      if (!statsData) {
+        // Count active venues
+        const { data: venuesData, error: venuesError } = await supabase
+          .from('venues')
+          .select('id')
+          .eq('availability', 'available');
+        
+        // Count bookings this month
+        const now = new Date();
+        const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+        const lastDayOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+        
+        const { data: bookingsData, error: bookingsError } = await supabase
+          .from('bookings')
+          .select('id')
+          .gte('start_date', firstDayOfMonth.toISOString())
+          .lte('start_date', lastDayOfMonth.toISOString());
+        
+        // Count guests today
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const tomorrow = new Date(today);
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        
+        const { data: todayBookings, error: todayBookingsError } = await supabase
+          .from('bookings')
+          .select('guest_count')
+          .gte('start_date', today.toISOString())
+          .lt('start_date', tomorrow.toISOString());
+        
+        const totalGuestsToday = todayBookings?.reduce((total, booking) => 
+          total + (booking.guest_count || 0), 0) || 0;
+        
+        return {
+          bookings_this_month: bookingsData?.length || 0,
+          active_venues: venuesData?.length || 0,
+          total_guests_today: totalGuestsToday
+        };
+      }
+      
+      return statsData;
     }
   });
 
-  // Use mock data for notifications
+  // Fetch notifications from Supabase
   const { data: notifications } = useQuery({
     queryKey: ['dashboardNotifications'],
     queryFn: async () => {
@@ -98,78 +149,195 @@ const Dashboard = () => {
     navigate('/bookings');
   };
   
-  // Mock data for events (would come from Supabase in a full implementation)
-  const todaysEvents = [
-    {
-      id: '1',
-      title: 'Smith Wedding Reception',
-      date: 'Apr 5, 2025',
-      time: '14:00 - 22:00',
-      venue: 'Grand Ballroom',
-      clientName: 'John & Sarah Smith',
-      eventType: 'Wedding',
-      status: 'ongoing' as const,
-      guestCount: 150
-    },
-    {
-      id: '2',
-      title: 'Johnson Anniversary Party',
-      date: 'Apr 5, 2025',
-      time: '18:00 - 23:00',
-      venue: 'Garden Terrace',
-      clientName: 'Robert Johnson',
-      eventType: 'Anniversary',
-      status: 'setup' as const,
-      guestCount: 75
-    },
-    {
-      id: '3',
-      title: 'Corporate Training Seminar',
-      date: 'Apr 5, 2025',
-      time: '9:00 - 17:00',
-      venue: 'Conference Room B',
-      clientName: 'Tech Solutions Inc.',
-      eventType: 'Corporate',
-      status: 'completed' as const,
-      guestCount: 50
+  // Fetch today's events from Supabase
+  const { data: todaysEvents = [] } = useQuery({
+    queryKey: ['todaysEvents'],
+    queryFn: async () => {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const tomorrow = new Date(today);
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      
+      const { data: bookings, error } = await supabase
+        .from('bookings')
+        .select(`
+          id, 
+          event_name, 
+          start_date, 
+          end_date, 
+          guest_count, 
+          status, 
+          event_type,
+          venues(name), 
+          clients(name)
+        `)
+        .gte('start_date', today.toISOString())
+        .lt('start_date', tomorrow.toISOString());
+      
+      if (error) {
+        console.error('Error fetching today\'s events:', error);
+        return [];
+      }
+      
+      return bookings.map(booking => {
+        const startDate = new Date(booking.start_date);
+        const endDate = booking.end_date ? new Date(booking.end_date) : null;
+        
+        const formatTime = (date: Date) => {
+          return date.toLocaleTimeString('en-US', { 
+            hour: '2-digit', 
+            minute: '2-digit',
+            hour12: true 
+          });
+        };
+        
+        const timeRange = endDate 
+          ? `${formatTime(startDate)} - ${formatTime(endDate)}` 
+          : `${formatTime(startDate)}`;
+        
+        return {
+          id: booking.id,
+          title: booking.event_name,
+          date: startDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+          time: timeRange,
+          venue: booking.venues?.name || 'Venue not specified',
+          clientName: booking.clients?.name || 'Client not specified',
+          eventType: booking.event_type,
+          status: booking.status as 'pending' | 'confirmed' | 'cancelled' | 'ongoing' | 'setup' | 'completed',
+          guestCount: booking.guest_count
+        };
+      });
     }
-  ];
+  });
 
-  const upcomingEvents = [
-    {
-      id: '4',
-      title: 'Davis Wedding Reception',
-      date: 'Apr 6, 2025',
-      time: '16:00 - 23:00',
-      venue: 'Grand Ballroom',
-      clientName: 'Michael & Emma Davis',
-      eventType: 'Wedding',
-      status: 'pending' as const,
-      guestCount: 120
-    },
-    {
-      id: '5',
-      title: 'Charity Fundraiser Gala',
-      date: 'Apr 7, 2025',
-      time: '18:00 - 22:00',
-      venue: 'Main Hall',
-      clientName: 'City Children Foundation',
-      eventType: 'Charity',
-      status: 'pending' as const,
-      guestCount: 200
-    },
-    {
-      id: '6',
-      title: 'Wilson Birthday Party',
-      date: 'Apr 8, 2025',
-      time: '13:00 - 18:00',
-      venue: 'Private Dining Room',
-      clientName: 'Jessica Wilson',
-      eventType: 'Birthday',
-      status: 'pending' as const,
-      guestCount: 30
+  // Fetch upcoming events from Supabase
+  const { data: upcomingEvents = [] } = useQuery({
+    queryKey: ['upcomingEvents'],
+    queryFn: async () => {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const nextWeek = new Date(today);
+      nextWeek.setDate(nextWeek.getDate() + 7);
+      
+      const { data: bookings, error } = await supabase
+        .from('bookings')
+        .select(`
+          id, 
+          event_name, 
+          start_date, 
+          end_date, 
+          guest_count, 
+          status, 
+          event_type,
+          venues(name), 
+          clients(name)
+        `)
+        .gt('start_date', today.toISOString())
+        .lte('start_date', nextWeek.toISOString())
+        .order('start_date', { ascending: true });
+      
+      if (error) {
+        console.error('Error fetching upcoming events:', error);
+        return [];
+      }
+      
+      return bookings.map(booking => {
+        const startDate = new Date(booking.start_date);
+        const endDate = booking.end_date ? new Date(booking.end_date) : null;
+        
+        const formatTime = (date: Date) => {
+          return date.toLocaleTimeString('en-US', { 
+            hour: '2-digit', 
+            minute: '2-digit',
+            hour12: true 
+          });
+        };
+        
+        const timeRange = endDate 
+          ? `${formatTime(startDate)} - ${formatTime(endDate)}` 
+          : `${formatTime(startDate)}`;
+        
+        return {
+          id: booking.id,
+          title: booking.event_name,
+          date: startDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+          time: timeRange,
+          venue: booking.venues?.name || 'Venue not specified',
+          clientName: booking.clients?.name || 'Client not specified',
+          eventType: booking.event_type,
+          status: booking.status as 'pending' | 'confirmed' | 'cancelled' | 'ongoing' | 'setup' | 'completed',
+          guestCount: booking.guest_count
+        };
+      });
     }
-  ];
+  });
+
+  // Fetch venue occupancy data from Supabase
+  const { data: venueOccupancy = [] } = useQuery({
+    queryKey: ['venueOccupancy'],
+    queryFn: async () => {
+      const { data: venues, error } = await supabase
+        .from('venues')
+        .select('id, name');
+      
+      if (error || !venues) {
+        console.error('Error fetching venues:', error);
+        return [];
+      }
+      
+      // Get today's date range
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const tomorrow = new Date(today);
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      
+      const venuesWithOccupancy = await Promise.all(venues.map(async venue => {
+        // For each venue, calculate how many hours it's booked for today
+        const { data: bookings, error: bookingsError } = await supabase
+          .from('bookings')
+          .select('start_date, end_date')
+          .eq('venue_id', venue.id)
+          .gte('start_date', today.toISOString())
+          .lt('start_date', tomorrow.toISOString());
+        
+        if (bookingsError) {
+          console.error(`Error fetching bookings for venue ${venue.id}:`, bookingsError);
+          return { 
+            name: venue.name, 
+            percent: 0 
+          };
+        }
+        
+        // Calculate total booked time in hours for today (assuming 24h availability)
+        let totalBookedMinutes = 0;
+        
+        bookings?.forEach(booking => {
+          const startDate = new Date(booking.start_date);
+          const endDate = booking.end_date ? new Date(booking.end_date) : new Date(startDate);
+          
+          if (endDate > startDate) {
+            // If booking spans multiple days, only count hours within today
+            const bookingStartInToday = startDate < today ? today : startDate;
+            const bookingEndInToday = endDate > tomorrow ? tomorrow : endDate;
+            
+            // Calculate minutes between bookingStartInToday and bookingEndInToday
+            const minutesDiff = (bookingEndInToday.getTime() - bookingStartInToday.getTime()) / (1000 * 60);
+            totalBookedMinutes += minutesDiff;
+          }
+        });
+        
+        // Calculate percentage of 24 hours (1440 minutes)
+        const percentBooked = Math.min(100, Math.round((totalBookedMinutes / 1440) * 100));
+        
+        return {
+          name: venue.name,
+          percent: percentBooked
+        };
+      }));
+      
+      return venuesWithOccupancy;
+    }
+  });
 
   return (
     <AppLayout>
@@ -186,20 +354,20 @@ const Dashboard = () => {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
         <StatCard 
           title="Bookings This Month" 
-          value={isLoadingStats ? "Loading..." : `${dashboardStats?.bookings_this_month}`}
+          value={isLoadingStats ? "Loading..." : `${dashboardStats?.bookings_this_month || 0}`}
           icon={<Calendar />}
           trend={{ value: 4, isPositive: true }}
           onClick={handleViewBookings}
         />
         <StatCard 
           title="Active Venues" 
-          value={isLoadingStats ? "Loading..." : `${dashboardStats?.active_venues}/6`}
+          value={isLoadingStats ? "Loading..." : `${dashboardStats?.active_venues || 0}/6`}
           icon={<Calendar />}
           onClick={() => navigate('/venues')}
         />
         <StatCard 
           title="Total Guests Today" 
-          value={isLoadingStats ? "Loading..." : `${dashboardStats?.total_guests_today}`}
+          value={isLoadingStats ? "Loading..." : `${dashboardStats?.total_guests_today || 0}`}
           icon={<Users />}
           trend={{ value: 5, isPositive: true }}
         />
@@ -209,14 +377,20 @@ const Dashboard = () => {
         <Card className="col-span-1 lg:col-span-2">
           <CardHeader>
             <CardTitle>Today's Events</CardTitle>
-            <CardDescription>All events scheduled for today, April 5, 2025</CardDescription>
+            <CardDescription>All events scheduled for today, {new Date().toLocaleDateString('en-US', {month: 'long', day: 'numeric', year: 'numeric'})}</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="space-y-4">
-              {todaysEvents.map(event => (
-                <EventCard key={event.id} {...event} />
-              ))}
-            </div>
+            {todaysEvents.length === 0 ? (
+              <div className="text-center py-6 text-muted-foreground">
+                <p>No events scheduled for today.</p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {todaysEvents.map(event => (
+                  <EventCard key={event.id} {...event} />
+                ))}
+              </div>
+            )}
             <Button 
               variant="outline" 
               className="w-full mt-4"
@@ -304,11 +478,17 @@ const Dashboard = () => {
             <CardDescription>Next 7 days</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="space-y-4">
-              {upcomingEvents.map(event => (
-                <EventCard key={event.id} {...event} />
-              ))}
-            </div>
+            {upcomingEvents.length === 0 ? (
+              <div className="text-center py-6 text-muted-foreground">
+                <p>No upcoming events scheduled for the next 7 days.</p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {upcomingEvents.map(event => (
+                  <EventCard key={event.id} {...event} />
+                ))}
+              </div>
+            )}
             
             <ViewCalendarButton />
           </CardContent>
@@ -320,55 +500,23 @@ const Dashboard = () => {
             <CardDescription>Today's occupancy</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <div className="flex justify-between text-sm">
-                  <span>Grand Ballroom</span>
-                  <span className="text-cyan-600">75% Booked</span>
-                </div>
-                <ProgressBar percent={75} color="bg-cyan-500" size="md" />
+            {venueOccupancy.length === 0 ? (
+              <div className="text-center py-6 text-muted-foreground">
+                <p>No venue occupancy data available.</p>
               </div>
-              
-              <div className="space-y-2">
-                <div className="flex justify-between text-sm">
-                  <span>Garden Terrace</span>
-                  <span className="text-cyan-600">50% Booked</span>
-                </div>
-                <ProgressBar percent={50} color="bg-cyan-500" size="md" />
+            ) : (
+              <div className="space-y-4">
+                {venueOccupancy.map((venue) => (
+                  <div key={venue.name} className="space-y-2">
+                    <div className="flex justify-between text-sm">
+                      <span>{venue.name}</span>
+                      <span className="text-cyan-600">{venue.percent}% Booked</span>
+                    </div>
+                    <ProgressBar percent={venue.percent} color="bg-cyan-500" size="md" />
+                  </div>
+                ))}
               </div>
-              
-              <div className="space-y-2">
-                <div className="flex justify-between text-sm">
-                  <span>Conference Room A</span>
-                  <span className="text-cyan-600">0% Booked</span>
-                </div>
-                <ProgressBar percent={0} color="bg-cyan-500" size="md" />
-              </div>
-              
-              <div className="space-y-2">
-                <div className="flex justify-between text-sm">
-                  <span>Conference Room B</span>
-                  <span className="text-cyan-600">100% Booked</span>
-                </div>
-                <ProgressBar percent={100} color="bg-cyan-500" size="md" />
-              </div>
-              
-              <div className="space-y-2">
-                <div className="flex justify-between text-sm">
-                  <span>Private Dining Room</span>
-                  <span className="text-cyan-600">25% Booked</span>
-                </div>
-                <ProgressBar percent={25} color="bg-cyan-500" size="md" />
-              </div>
-              
-              <div className="space-y-2">
-                <div className="flex justify-between text-sm">
-                  <span>Main Hall</span>
-                  <span className="text-cyan-600">0% Booked</span>
-                </div>
-                <ProgressBar percent={0} color="bg-cyan-500" size="md" />
-              </div>
-            </div>
+            )}
             
             <CheckAvailabilityButton />
           </CardContent>
