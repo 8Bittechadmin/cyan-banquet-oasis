@@ -117,16 +117,20 @@ const BookingFormFields: React.FC<BookingFormFieldsProps> = ({ form }) => {
   ];
 
   // Custom date selection handlers
-  const handleStartDateSelect = (date: Date) => {
-    const startDate = new Date(date);
-    startDate.setHours(9, 0, 0, 0); // Set default time to 9:00 AM
-    form.setValue('start_date', startDate);
+  const handleStartDateSelect = (date: Date | undefined) => {
+    if (date) {
+      const startDate = new Date(date);
+      startDate.setHours(9, 0, 0, 0); // Set default time to 9:00 AM
+      form.setValue('start_date', startDate);
+    }
   };
 
-  const handleEndDateSelect = (date: Date) => {
-    const endDate = new Date(date);
-    endDate.setHours(17, 0, 0, 0); // Set default time to 5:00 PM
-    form.setValue('end_date', endDate);
+  const handleEndDateSelect = (date: Date | undefined) => {
+    if (date) {
+      const endDate = new Date(date);
+      endDate.setHours(17, 0, 0, 0); // Set default time to 5:00 PM
+      form.setValue('end_date', endDate);
+    }
   };
 
   return (
@@ -198,12 +202,7 @@ const BookingFormFields: React.FC<BookingFormFieldsProps> = ({ form }) => {
                 <Calendar
                   mode="single"
                   selected={form.watch('start_date') ? new Date(form.watch('start_date')) : undefined}
-                  onSelect={(date) => {
-                    if (date) {
-                      handleStartDateSelect(date);
-                      setStartDateOpen(false);
-                    }
-                  }}
+                  onSelect={handleStartDateSelect}
                   initialFocus
                 />
                 <div className="p-3 border-t border-border flex justify-end">
@@ -241,12 +240,7 @@ const BookingFormFields: React.FC<BookingFormFieldsProps> = ({ form }) => {
                 <Calendar
                   mode="single"
                   selected={form.watch('end_date') ? new Date(form.watch('end_date')) : undefined}
-                  onSelect={(date) => {
-                    if (date) {
-                      handleEndDateSelect(date);
-                      setEndDateOpen(false);
-                    }
-                  }}
+                  onSelect={handleEndDateSelect}
                   initialFocus
                 />
                 <div className="p-3 border-t border-border flex justify-end">

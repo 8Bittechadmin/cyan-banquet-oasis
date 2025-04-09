@@ -92,7 +92,6 @@ const VenueForm: React.FC<VenueFormProps> = ({
           name="description"
           label="Description (Optional)"
           placeholder="Enter venue description"
-          required={false}
         />
         
         <InputField

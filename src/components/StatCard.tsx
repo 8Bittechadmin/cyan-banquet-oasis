@@ -11,6 +11,7 @@ interface StatCardProps {
     isPositive: boolean;
   };
   className?: string;
+  onClick?: () => void;
 }
 
 const StatCard: React.FC<StatCardProps> = ({ 
@@ -18,10 +19,17 @@ const StatCard: React.FC<StatCardProps> = ({
   value, 
   icon, 
   trend,
-  className
+  className,
+  onClick
 }) => {
+  const cardClasses = cn(
+    "card-stats",
+    onClick && "cursor-pointer hover:shadow-md transition-shadow", 
+    className
+  );
+
   return (
-    <div className={cn("card-stats", className)}>
+    <div className={cardClasses} onClick={onClick}>
       <div className="flex items-start justify-between">
         <div>
           <h3 className="card-stats-header">{title}</h3>
