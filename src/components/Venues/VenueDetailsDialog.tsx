@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -13,10 +13,12 @@ import {
 } from "@/components/ui/alert-dialog"
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Calendar, Users, Square, Clock, MapPin } from 'lucide-react';
-import { useQuery } from '@tanstack/react-query';
+import { Calendar, Users, Square, Clock, MapPin, Edit, Trash2 } from 'lucide-react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
+import DeleteConfirmDialog from '@/components/Common/DeleteConfirmDialog';
+import VenueModal from './VenueModal';
 
 interface VenueDetailsDialogProps {
   venueId: string;
@@ -25,6 +27,11 @@ interface VenueDetailsDialogProps {
 }
 
 const VenueDetailsDialog: React.FC<VenueDetailsDialogProps> = ({ venueId, open, onOpenChange }) => {
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const queryClient = useQueryClient();
+
   const { data: venue, isLoading, error } = useQuery({
     queryKey: ['venue', venueId],
     queryFn: async () => {
@@ -49,6 +56,65 @@ const VenueDetailsDialog: React.FC<VenueDetailsDialogProps> = ({ venueId, open, 
     });
   }
 
+  const handleEdit = () => {
+    setIsEditModalOpen(true);
+  };
+
+  const handleDelete = async () => {
+    if (!venue) return;
+    
+    setIsDeleting(true);
+    try {
+      // First check if venue has active bookings
+      const { data: activeBookings } = await supabase
+        .from('bookings')
+        .select('id')
+        .eq('venue_id', venueId)
+        .gt('end_date', new Date().toISOString())
+        .eq('status', 'confirmed')
+        .limit(1);
+      
+      if (activeBookings && activeBookings.length > 0) {
+        toast({
+          title: "Cannot Delete Venue",
+          description: "This venue has active bookings. Cancel or complete those bookings first.",
+          variant: "destructive"
+        });
+        setIsDeleting(false);
+        setIsDeleteDialogOpen(false);
+        return;
+      }
+      
+      // If no active bookings, proceed with deletion
+      const { error } = await supabase
+        .from('venues')
+        .delete()
+        .eq('id', venueId);
+      
+      if (error) throw error;
+      
+      toast({
+        title: 'Venue Deleted',
+        description: `${venue.name} has been deleted successfully.`
+      });
+      
+      // Close all dialogs and refresh the venues list
+      onOpenChange(false);
+      setIsDeleteDialogOpen(false);
+      queryClient.invalidateQueries({ queryKey: ['venues'] });
+      
+    } catch (error) {
+      console.error('Error deleting venue:', error);
+      toast({
+        title: 'Error',
+        description: 'There was a problem deleting the venue.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
   const getAvailabilityColor = (availability: string) => {
     switch (availability) {
       case 'available': return 'bg-green-100 text-green-800 hover:bg-green-200';
@@ -63,63 +129,126 @@ const VenueDetailsDialog: React.FC<VenueDetailsDialogProps> = ({ venueId, open, 
   };
 
   return (
-    <AlertDialog open={open} onOpenChange={onOpenChange}>
-      <AlertDialogTrigger asChild>
-        {/* This trigger is not visible, it's just needed for the dialog to open */}
-      </AlertDialogTrigger>
-      <AlertDialogContent>
-        <AlertDialogHeader>
-          <AlertDialogTitle>{venue?.name || 'Loading...'}</AlertDialogTitle>
-        </AlertDialogHeader>
-        <div className="grid gap-4 py-4">
-          {isLoading ? (
-            <AlertDialogDescription>Loading venue details...</AlertDialogDescription>
-          ) : venue ? (
-            <>
-              <AlertDialogDescription>
-                <div className="grid gap-2 text-sm">
-                  <div className="flex items-center gap-1">
-                    <Users className="h-4 w-4 text-gray-500" />
-                    <span>Capacity: {venue.capacity}</span>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <Square className="h-4 w-4 text-gray-500" />
-                    <span>{venue.square_footage} sq ft</span>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <Clock className="h-4 w-4 text-gray-500" />
-                    <span>${venue.hourly_rate}/hour</span>
-                  </div>
-                  {/* Only render location if it exists */}
-                  {venue.location && (
-                    <div className="flex items-center gap-1">
-                      <MapPin className="h-4 w-4 text-gray-500" />
-                      <span>{venue.location as string}</span>
-                    </div>
-                  )}
-                  <div className="flex items-center gap-1">
+    <>
+      <AlertDialog open={open} onOpenChange={onOpenChange}>
+        <AlertDialogTrigger asChild>
+          {/* This trigger is not visible, it's just needed for the dialog to open */}
+        </AlertDialogTrigger>
+        <AlertDialogContent className="sm:max-w-[550px]">
+          <AlertDialogHeader>
+            <div className="flex justify-between items-center">
+              <AlertDialogTitle>{venue?.name || 'Loading...'}</AlertDialogTitle>
+              <div className="flex space-x-2">
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleEdit();
+                  }}
+                >
+                  <Edit size={18} className="text-blue-500" />
+                </Button>
+                <Button 
+                  variant="ghost" 
+                  size="icon"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setIsDeleteDialogOpen(true);
+                  }}
+                >
+                  <Trash2 size={18} className="text-red-500" />
+                </Button>
+              </div>
+            </div>
+          </AlertDialogHeader>
+          <div className="grid gap-4 py-4">
+            {isLoading ? (
+              <AlertDialogDescription>Loading venue details...</AlertDialogDescription>
+            ) : venue ? (
+              <>
+                <div className="aspect-video w-full overflow-hidden rounded-md">
+                  <img 
+                    src={venue.image_url || 'https://images.unsplash.com/photo-1519167758481-83f550bb49b3?q=80&w=500&auto=format&fit=crop'} 
+                    alt={venue.name} 
+                    className="h-full w-full object-cover"
+                  />
+                </div>
+                
+                <AlertDialogDescription>
+                  <div className="grid gap-4 text-sm">
                     <Badge className={getAvailabilityColor(venue.availability || 'available')}>
                       {getAvailabilityLabel(venue.availability || 'available')}
                     </Badge>
-                  </div>
-                  {venue.description && (
-                    <div>
+                    
+                    {venue.description && (
                       <p className="text-muted-foreground">{venue.description}</p>
+                    )}
+                    
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="flex items-center gap-2">
+                        <Users className="h-4 w-4 text-gray-500" />
+                        <span>Capacity: {venue.capacity}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Square className="h-4 w-4 text-gray-500" />
+                        <span>{venue.square_footage} sq ft</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Clock className="h-4 w-4 text-gray-500" />
+                        <span>${venue.hourly_rate}/hour</span>
+                      </div>
+                      {venue.location && (
+                        <div className="flex items-center gap-2">
+                          <MapPin className="h-4 w-4 text-gray-500" />
+                          <span>{venue.location}</span>
+                        </div>
+                      )}
                     </div>
-                  )}
-                </div>
-              </AlertDialogDescription>
-            </>
-          ) : (
-            <AlertDialogDescription>Failed to load venue details.</AlertDialogDescription>
-          )}
-        </div>
-        <AlertDialogFooter>
-          <AlertDialogCancel>Cancel</AlertDialogCancel>
-          <AlertDialogAction>Okay</AlertDialogAction>
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
+                    
+                    {venue.features && venue.features.length > 0 && (
+                      <div>
+                        <h4 className="font-medium mb-1">Features:</h4>
+                        <div className="flex flex-wrap gap-1">
+                          {venue.features.map((feature: string, index: number) => (
+                            <Badge key={index} variant="outline">{feature}</Badge>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </AlertDialogDescription>
+              </>
+            ) : (
+              <AlertDialogDescription>Failed to load venue details.</AlertDialogDescription>
+            )}
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Close</AlertDialogCancel>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+      
+      {/* Edit Modal */}
+      {venue && (
+        <VenueModal 
+          open={isEditModalOpen} 
+          onOpenChange={setIsEditModalOpen} 
+          venue={venue} 
+          isEditing={true}
+        />
+      )}
+      
+      {/* Delete Confirmation Dialog */}
+      <DeleteConfirmDialog
+        open={isDeleteDialogOpen}
+        onOpenChange={setIsDeleteDialogOpen}
+        onConfirm={handleDelete}
+        isDeleting={isDeleting}
+        title={`Delete ${venue?.name || 'Venue'}`}
+        description="This will permanently delete this venue. This action cannot be undone."
+      />
+    </>
   );
 };
 

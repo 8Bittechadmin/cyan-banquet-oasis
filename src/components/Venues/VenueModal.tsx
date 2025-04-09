@@ -81,6 +81,9 @@ export const VenueModal: React.FC<VenueModalProps> = ({
           title: 'Venue Updated',
           description: `${values.name} has been updated successfully.`,
         });
+        
+        // Also invalidate the specific venue query to update the details dialog
+        queryClient.invalidateQueries({ queryKey: ['venue', venue.id] });
       } else {
         // Insert new venue
         const { error } = await supabase
