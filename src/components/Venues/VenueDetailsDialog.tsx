@@ -1,3 +1,4 @@
+
 import React from 'react';
 import {
   AlertDialog,
@@ -89,7 +90,8 @@ const VenueDetailsDialog: React.FC<VenueDetailsDialogProps> = ({ venueId, open, 
                     <Clock className="h-4 w-4 text-gray-500" />
                     <span>${venue.hourly_rate}/hour</span>
                   </div>
-                  {venue.location && (
+                  {/* Only render location if it exists */}
+                  {'location' in venue && venue.location && (
                     <div className="flex items-center gap-1">
                       <MapPin className="h-4 w-4 text-gray-500" />
                       <span>{venue.location}</span>

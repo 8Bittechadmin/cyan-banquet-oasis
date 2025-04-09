@@ -137,7 +137,7 @@ const Venues: React.FC = () => {
                         <span>${venue.hourly_rate}/hour</span>
                       </div>
                       {/* Only render location if it exists */}
-                      {venue.location && (
+                      {'location' in venue && venue.location && (
                         <div className="flex items-center gap-1">
                           <MapPin className="h-4 w-4 text-gray-500" />
                           <span>{venue.location}</span>

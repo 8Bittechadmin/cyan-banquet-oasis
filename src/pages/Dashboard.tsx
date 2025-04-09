@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import AppLayout from '@/components/AppLayout';
@@ -32,7 +32,7 @@ const Dashboard = () => {
       const { data: statsData, error: statsError } = await supabase
         .from('dashboard_stats')
         .select('*')
-        .single();
+        .maybeSingle();
       
       if (statsError) {
         console.error('Error fetching dashboard stats:', statsError);
@@ -90,7 +90,7 @@ const Dashboard = () => {
   });
 
   // Fetch notifications from Supabase
-  const { data: notifications } = useQuery({
+  const { data: notifications = [] } = useQuery({
     queryKey: ['dashboardNotifications'],
     queryFn: async () => {
       const { data } = await supabase.from('dashboard_notifications')
@@ -158,6 +158,7 @@ const Dashboard = () => {
       const tomorrow = new Date(today);
       tomorrow.setDate(tomorrow.getDate() + 1);
       
+      // First, get today's bookings
       const { data: bookings, error } = await supabase
         .from('bookings')
         .select(`
@@ -168,8 +169,8 @@ const Dashboard = () => {
           guest_count, 
           status, 
           event_type,
-          venues(name), 
-          clients(name)
+          venue_id,
+          client_id
         `)
         .gte('start_date', today.toISOString())
         .lt('start_date', tomorrow.toISOString());
@@ -179,6 +180,42 @@ const Dashboard = () => {
         return [];
       }
       
+      // Then, get venue and client information separately
+      const venueIds = bookings.map(booking => booking.venue_id).filter(id => id);
+      const clientIds = bookings.map(booking => booking.client_id).filter(id => id);
+      
+      let venues = {};
+      let clients = {};
+      
+      if (venueIds.length > 0) {
+        const { data: venueData } = await supabase
+          .from('venues')
+          .select('id, name')
+          .in('id', venueIds);
+          
+        if (venueData) {
+          venues = venueData.reduce((acc, venue) => {
+            acc[venue.id] = venue;
+            return acc;
+          }, {});
+        }
+      }
+      
+      if (clientIds.length > 0) {
+        const { data: clientData } = await supabase
+          .from('clients')
+          .select('id, name')
+          .in('id', clientIds);
+          
+        if (clientData) {
+          clients = clientData.reduce((acc, client) => {
+            acc[client.id] = client;
+            return acc;
+          }, {});
+        }
+      }
+      
+      // Map bookings to events with venue and client data
       return bookings.map(booking => {
         const startDate = new Date(booking.start_date);
         const endDate = booking.end_date ? new Date(booking.end_date) : null;
@@ -194,17 +231,21 @@ const Dashboard = () => {
         const timeRange = endDate 
           ? `${formatTime(startDate)} - ${formatTime(endDate)}` 
           : `${formatTime(startDate)}`;
+          
+        const venue = booking.venue_id ? venues[booking.venue_id]?.name || 'Venue not specified' : 'Venue not specified';
+        const clientName = booking.client_id ? clients[booking.client_id]?.name || 'Client not specified' : 'Client not specified';
         
         return {
           id: booking.id,
           title: booking.event_name,
           date: startDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
           time: timeRange,
-          venue: booking.venues?.name || 'Venue not specified',
-          clientName: booking.clients?.name || 'Client not specified',
+          venue,
+          clientName,
           eventType: booking.event_type,
           status: booking.status as 'pending' | 'confirmed' | 'cancelled' | 'ongoing' | 'setup' | 'completed',
-          guestCount: booking.guest_count
+          guestCount: booking.guest_count,
+          key: booking.id
         };
       });
     }
@@ -219,6 +260,7 @@ const Dashboard = () => {
       const nextWeek = new Date(today);
       nextWeek.setDate(nextWeek.getDate() + 7);
       
+      // First, get upcoming bookings
       const { data: bookings, error } = await supabase
         .from('bookings')
         .select(`
@@ -229,8 +271,8 @@ const Dashboard = () => {
           guest_count, 
           status, 
           event_type,
-          venues(name), 
-          clients(name)
+          venue_id,
+          client_id
         `)
         .gt('start_date', today.toISOString())
         .lte('start_date', nextWeek.toISOString())
@@ -241,6 +283,42 @@ const Dashboard = () => {
         return [];
       }
       
+      // Then, get venue and client information separately
+      const venueIds = bookings.map(booking => booking.venue_id).filter(id => id);
+      const clientIds = bookings.map(booking => booking.client_id).filter(id => id);
+      
+      let venues = {};
+      let clients = {};
+      
+      if (venueIds.length > 0) {
+        const { data: venueData } = await supabase
+          .from('venues')
+          .select('id, name')
+          .in('id', venueIds);
+          
+        if (venueData) {
+          venues = venueData.reduce((acc, venue) => {
+            acc[venue.id] = venue;
+            return acc;
+          }, {});
+        }
+      }
+      
+      if (clientIds.length > 0) {
+        const { data: clientData } = await supabase
+          .from('clients')
+          .select('id, name')
+          .in('id', clientIds);
+          
+        if (clientData) {
+          clients = clientData.reduce((acc, client) => {
+            acc[client.id] = client;
+            return acc;
+          }, {});
+        }
+      }
+      
+      // Map bookings to events with venue and client data
       return bookings.map(booking => {
         const startDate = new Date(booking.start_date);
         const endDate = booking.end_date ? new Date(booking.end_date) : null;
@@ -256,17 +334,21 @@ const Dashboard = () => {
         const timeRange = endDate 
           ? `${formatTime(startDate)} - ${formatTime(endDate)}` 
           : `${formatTime(startDate)}`;
+          
+        const venue = booking.venue_id ? venues[booking.venue_id]?.name || 'Venue not specified' : 'Venue not specified';
+        const clientName = booking.client_id ? clients[booking.client_id]?.name || 'Client not specified' : 'Client not specified';
         
         return {
           id: booking.id,
           title: booking.event_name,
           date: startDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
           time: timeRange,
-          venue: booking.venues?.name || 'Venue not specified',
-          clientName: booking.clients?.name || 'Client not specified',
+          venue,
+          clientName,
           eventType: booking.event_type,
           status: booking.status as 'pending' | 'confirmed' | 'cancelled' | 'ongoing' | 'setup' | 'completed',
-          guestCount: booking.guest_count
+          guestCount: booking.guest_count,
+          key: booking.id
         };
       });
     }
@@ -387,7 +469,7 @@ const Dashboard = () => {
             ) : (
               <div className="space-y-4">
                 {todaysEvents.map(event => (
-                  <EventCard key={event.id} {...event} />
+                  <EventCard key={event.key} {...event} />
                 ))}
               </div>
             )}
@@ -485,7 +567,7 @@ const Dashboard = () => {
             ) : (
               <div className="space-y-4">
                 {upcomingEvents.map(event => (
-                  <EventCard key={event.id} {...event} />
+                  <EventCard key={event.key} {...event} />
                 ))}
               </div>
             )}

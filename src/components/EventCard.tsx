@@ -3,7 +3,7 @@ import React from 'react';
 import { Calendar, Clock, MapPin, Users } from 'lucide-react';
 import EventStatusBadge from './EventStatusBadge';
 
-export type EventStatus = 'setup' | 'ongoing' | 'completed' | 'cancelled' | 'pending';
+export type EventStatus = 'setup' | 'ongoing' | 'completed' | 'cancelled' | 'pending' | 'confirmed';
 
 interface EventCardProps {
   id: string;
