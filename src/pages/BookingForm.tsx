@@ -2,7 +2,7 @@
 import React from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
 import AppLayout from '@/components/AppLayout';
@@ -25,6 +25,8 @@ import { BookingFormSchema, type BookingFormValues } from '@/components/Bookings
 const BookingForm = () => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const [searchParams] = useSearchParams();
+  const startDateParam = searchParams.get('date');
   
   const form = useForm<BookingFormValues>({
     resolver: zodResolver(BookingFormSchema),
@@ -33,7 +35,7 @@ const BookingForm = () => {
       event_type: '',
       venue_id: '',
       client_id: '',
-      start_date: new Date(),
+      start_date: startDateParam || new Date().toISOString().split('T')[0] + 'T09:00',
       guest_count: 1,
       deposit_paid: false,
       status: 'pending',
@@ -49,8 +51,8 @@ const BookingForm = () => {
           event_type: values.event_type,
           venue_id: values.venue_id,
           client_id: values.client_id,
-          start_date: values.start_date.toISOString(),
-          end_date: values.end_date ? values.end_date.toISOString() : null,
+          start_date: values.start_date,
+          end_date: values.end_date || null,
           guest_count: values.guest_count,
           total_amount: values.total_amount || null,
           deposit_amount: values.deposit_amount || null,
