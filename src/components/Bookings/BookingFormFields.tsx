@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { CardContent, CardFooter } from '@/components/ui/card';
+import { CardContent } from '@/components/ui/card';
 import { InputField, SelectField, TextareaField, CheckboxField } from '@/components/Common/FormFields';
 import { UseFormReturn } from 'react-hook-form';
 import { useQuery } from '@tanstack/react-query';
@@ -13,7 +13,6 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
 import { format } from 'date-fns';
-import { DialogClose } from '@/components/ui/dialog';
 
 interface BookingFormFieldsProps {
   form: UseFormReturn<BookingFormValues>;
@@ -135,12 +134,6 @@ const BookingFormFields: React.FC<BookingFormFieldsProps> = ({ form }) => {
 
   return (
     <CardContent>
-      <div className="flex justify-end mb-2">
-        <DialogClose className="h-8 w-8 rounded-full hover:bg-muted flex items-center justify-center">
-          <X className="h-4 w-4" />
-        </DialogClose>
-      </div>
-      
       <div className="grid gap-6">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <InputField
