@@ -6,8 +6,8 @@ export const BookingFormSchema = z.object({
   event_type: z.string().min(1, 'Event type is required'),
   venue_id: z.string().min(1, 'Venue is required'),
   client_id: z.string().min(1, 'Client is required'),
-  start_date: z.string().or(z.date()),
-  end_date: z.string().or(z.date()).optional(),
+  start_date: z.string().min(1, 'Start date is required'),
+  end_date: z.string().min(1, 'End date is required'), // Changed to required
   guest_count: z.number().min(1, 'Guest count is required'),
   total_amount: z.number().optional(),
   deposit_amount: z.number().optional(),

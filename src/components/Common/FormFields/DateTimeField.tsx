@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input';
 import { UseFormReturn } from 'react-hook-form';
 import { Button } from '@/components/ui/button';
 import { X } from 'lucide-react';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 interface DateTimeFieldProps {
   form: UseFormReturn<any>;
@@ -12,6 +13,7 @@ interface DateTimeFieldProps {
   label: string;
   className?: string;
   optional?: boolean;
+  required?: boolean;
 }
 
 export const DateTimeField: React.FC<DateTimeFieldProps> = ({
@@ -19,10 +21,20 @@ export const DateTimeField: React.FC<DateTimeFieldProps> = ({
   name,
   label,
   className,
-  optional = false
+  optional = false,
+  required = false
 }) => {
+  const isMobile = useIsMobile();
+  
   const handleClear = () => {
-    form.setValue(name, undefined);
+    if (required) {
+      // If it's required, set to current date instead of clearing
+      const now = new Date();
+      const formattedDate = now.toISOString().slice(0, 16); // Format as YYYY-MM-DDTHH:MM
+      form.setValue(name, formattedDate);
+    } else {
+      form.setValue(name, '');
+    }
   };
 
   return (
@@ -32,8 +44,12 @@ export const DateTimeField: React.FC<DateTimeFieldProps> = ({
       render={({ field }) => (
         <FormItem className={className}>
           <div className="flex justify-between items-center">
-            <FormLabel>{label}{optional && <span className="text-xs text-muted-foreground ml-1">(Optional)</span>}</FormLabel>
-            {field.value && optional && (
+            <FormLabel>
+              {label}
+              {required && <span className="text-red-500 ml-1">*</span>}
+              {optional && <span className="text-xs text-muted-foreground ml-1">(Optional)</span>}
+            </FormLabel>
+            {field.value && (
               <Button 
                 type="button" 
                 variant="ghost" 
@@ -51,12 +67,9 @@ export const DateTimeField: React.FC<DateTimeFieldProps> = ({
               {...field} 
               value={field.value ? field.value : ''} 
               onChange={(e) => {
-                if (e.target.value === '') {
-                  field.onChange(undefined);
-                } else {
-                  field.onChange(e.target.value);
-                }
+                field.onChange(e.target.value);
               }}
+              className={isMobile ? "text-sm" : ""}
             />
           </FormControl>
           <FormMessage />

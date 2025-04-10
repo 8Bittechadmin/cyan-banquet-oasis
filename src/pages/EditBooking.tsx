@@ -24,12 +24,21 @@ import { BookingFormSchema, type BookingFormValues } from '@/components/Bookings
 import { ArrowLeft, Trash2 } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { AlertCircle } from 'lucide-react';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 const EditBooking = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [deleteError, setDeleteError] = React.useState<string | null>(null);
+  const isMobile = useIsMobile();
+  
+  // Helper to format dates from database to input format
+  const formatDateForInput = (dateString: string): string => {
+    if (!dateString) return '';
+    // Convert to ISO string and remove seconds and milliseconds
+    return new Date(dateString).toISOString().slice(0, 16);
+  };
   
   const { data: booking, isLoading } = useQuery({
     queryKey: ['booking', id],
@@ -54,6 +63,7 @@ const EditBooking = () => {
       venue_id: '',
       client_id: '',
       start_date: '',
+      end_date: '',
       guest_count: 1,
       deposit_paid: false,
       status: 'pending',
@@ -68,8 +78,8 @@ const EditBooking = () => {
         event_type: booking.event_type,
         venue_id: booking.venue_id,
         client_id: booking.client_id,
-        start_date: booking.start_date,
-        end_date: booking.end_date || undefined,
+        start_date: formatDateForInput(booking.start_date),
+        end_date: formatDateForInput(booking.end_date),
         guest_count: booking.guest_count,
         total_amount: booking.total_amount,
         deposit_amount: booking.deposit_amount,
@@ -90,7 +100,7 @@ const EditBooking = () => {
           venue_id: values.venue_id,
           client_id: values.client_id,
           start_date: values.start_date,
-          end_date: values.end_date || null,
+          end_date: values.end_date,
           guest_count: values.guest_count,
           total_amount: values.total_amount || null,
           deposit_amount: values.deposit_amount || null,
@@ -266,17 +276,19 @@ const EditBooking = () => {
             
             <BookingFormFields form={form} />
             
-            <CardFooter className="flex justify-between">
+            <CardFooter className={`flex ${isMobile ? 'flex-col space-y-2' : 'justify-between'}`}>
               <Button
                 type="button"
                 variant="outline"
                 onClick={() => navigate('/bookings')}
+                className={isMobile ? "w-full" : ""}
               >
                 Cancel
               </Button>
               <Button 
                 type="submit"
                 disabled={updateBooking.isPending}
+                className={isMobile ? "w-full" : ""}
               >
                 {updateBooking.isPending ? 'Updating...' : 'Update Booking'}
               </Button>

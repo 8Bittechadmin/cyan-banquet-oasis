@@ -1,7 +1,8 @@
 
 import React, { useState, useEffect } from 'react';
 import { CardContent } from '@/components/ui/card';
-import { InputField, SelectField, TextareaField, CheckboxField, DateTimeField } from '@/components/Common/FormFields';
+import { InputField, SelectField, TextareaField, CheckboxField } from '@/components/Common/FormFields';
+import { DateTimeField } from '@/components/Common/FormFields/DateTimeField';
 import { UseFormReturn } from 'react-hook-form';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -9,6 +10,7 @@ import { BookingFormValues } from './BookingFormSchema';
 import QuickAddClient from './QuickAddClient';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { AlertCircle } from 'lucide-react';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 interface BookingFormFieldsProps {
   form: UseFormReturn<BookingFormValues>;
@@ -19,6 +21,7 @@ const BookingFormFields: React.FC<BookingFormFieldsProps> = ({ form }) => {
   const [venueOptions, setVenueOptions] = useState<{ value: string; label: string; }[]>([]);
   const [depositAmount, setDepositAmount] = useState<number | undefined>(form.getValues('deposit_amount'));
   const [totalAmount, setTotalAmount] = useState<number | undefined>(form.getValues('total_amount'));
+  const isMobile = useIsMobile();
 
   // Query to get all clients
   const { data: clients = [], isLoading: isClientsLoading } = useQuery({
@@ -112,7 +115,7 @@ const BookingFormFields: React.FC<BookingFormFieldsProps> = ({ form }) => {
   return (
     <CardContent>
       <div className="grid gap-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className={`grid grid-cols-1 ${isMobile ? '' : 'md:grid-cols-2'} gap-4`}>
           <InputField
             form={form}
             name="event_name"
@@ -128,7 +131,7 @@ const BookingFormFields: React.FC<BookingFormFieldsProps> = ({ form }) => {
           />
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className={`grid grid-cols-1 ${isMobile ? '' : 'md:grid-cols-2'} gap-4`}>
           <div>
             <div className="flex justify-between items-end mb-1">
               <label className="text-sm font-medium" htmlFor="client_id">Client</label>
@@ -151,24 +154,25 @@ const BookingFormFields: React.FC<BookingFormFieldsProps> = ({ form }) => {
           />
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className={`grid grid-cols-1 ${isMobile ? '' : 'md:grid-cols-2'} gap-4`}>
           {/* Start Date DateTimeField */}
           <DateTimeField
             form={form}
             name="start_date"
             label="Start Date & Time"
+            required={true}
           />
           
-          {/* End Date DateTimeField (Optional) */}
+          {/* End Date DateTimeField (Required) */}
           <DateTimeField
             form={form}
             name="end_date"
             label="End Date & Time"
-            optional={true}
+            required={true}
           />
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className={`grid grid-cols-1 ${isMobile ? '' : 'md:grid-cols-3'} gap-4`}>
           <div>
             <label className="text-sm font-medium">Number of Guests</label>
             <input
@@ -219,7 +223,7 @@ const BookingFormFields: React.FC<BookingFormFieldsProps> = ({ form }) => {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className={`grid grid-cols-1 ${isMobile ? '' : 'md:grid-cols-2'} gap-4`}>
           <CheckboxField
             form={form}
             name="deposit_paid"

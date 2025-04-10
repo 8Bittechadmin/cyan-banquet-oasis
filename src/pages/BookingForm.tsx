@@ -21,12 +21,21 @@ import { toast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import BookingFormFields from '@/components/Bookings/BookingFormFields';
 import { BookingFormSchema, type BookingFormValues } from '@/components/Bookings/BookingFormSchema';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 const BookingForm = () => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [searchParams] = useSearchParams();
   const startDateParam = searchParams.get('date');
+  const isMobile = useIsMobile();
+  
+  // Helper to create default dates
+  const getDefaultDate = (hoursToAdd = 0) => {
+    const date = new Date();
+    date.setHours(date.getHours() + hoursToAdd);
+    return date.toISOString().slice(0, 16); // Format as YYYY-MM-DDTHH:MM
+  };
   
   const form = useForm<BookingFormValues>({
     resolver: zodResolver(BookingFormSchema),
@@ -35,7 +44,8 @@ const BookingForm = () => {
       event_type: '',
       venue_id: '',
       client_id: '',
-      start_date: startDateParam || new Date().toISOString().split('T')[0] + 'T09:00',
+      start_date: startDateParam || getDefaultDate(),
+      end_date: getDefaultDate(3), // Default end date 3 hours after current time
       guest_count: 1,
       deposit_paid: false,
       status: 'pending',
@@ -52,7 +62,7 @@ const BookingForm = () => {
           venue_id: values.venue_id,
           client_id: values.client_id,
           start_date: values.start_date,
-          end_date: values.end_date || null,
+          end_date: values.end_date,
           guest_count: values.guest_count,
           total_amount: values.total_amount || null,
           deposit_amount: values.deposit_amount || null,
@@ -102,17 +112,19 @@ const BookingForm = () => {
           <form onSubmit={form.handleSubmit(onSubmit)}>
             <BookingFormFields form={form} />
             
-            <CardFooter className="flex justify-between">
+            <CardFooter className={`flex ${isMobile ? 'flex-col space-y-2' : 'justify-between'}`}>
               <Button
                 type="button"
                 variant="outline"
                 onClick={() => navigate('/bookings')}
+                className={isMobile ? "w-full" : ""}
               >
                 Cancel
               </Button>
               <Button 
                 type="submit"
                 disabled={createBooking.isPending}
+                className={isMobile ? "w-full" : ""}
               >
                 {createBooking.isPending ? 'Creating...' : 'Create Booking'}
               </Button>
