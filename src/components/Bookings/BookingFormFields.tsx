@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { CardContent } from '@/components/ui/card';
 import { InputField, SelectField, TextareaField, CheckboxField } from '@/components/Common/FormFields';
@@ -23,7 +22,6 @@ const BookingFormFields: React.FC<BookingFormFieldsProps> = ({ form }) => {
   const [totalAmount, setTotalAmount] = useState<number | undefined>(form.getValues('total_amount'));
   const isMobile = useIsMobile();
 
-  // Query to get all clients
   const { data: clients = [], isLoading: isClientsLoading } = useQuery({
     queryKey: ['clients'],
     queryFn: async () => {
@@ -37,7 +35,6 @@ const BookingFormFields: React.FC<BookingFormFieldsProps> = ({ form }) => {
     },
   });
 
-  // Query to get all venues
   const { data: venues = [], isLoading: isVenuesLoading } = useQuery({
     queryKey: ['venues'],
     queryFn: async () => {
@@ -51,7 +48,6 @@ const BookingFormFields: React.FC<BookingFormFieldsProps> = ({ form }) => {
     },
   });
 
-  // Format options for select fields
   useEffect(() => {
     if (clients.length > 0) {
       setClientOptions(clients.map(client => ({
@@ -70,20 +66,13 @@ const BookingFormFields: React.FC<BookingFormFieldsProps> = ({ form }) => {
     }
   }, [venues]);
 
-  // Handle client addition
   const handleClientAdded = (client: { id: string; name: string }) => {
-    // Add the new client to the options
     setClientOptions(prev => [...prev, { value: client.id, label: client.name }]);
-    
-    // Set the form value to the new client
     form.setValue('client_id', client.id);
   };
 
-  // Handle number inputs for financial fields
   const handleTotalAmountChange = (value: any) => {
     setTotalAmount(value);
-    
-    // If deposit amount is greater than the new total, adjust it
     if (depositAmount && depositAmount > value) {
       setDepositAmount(value);
       form.setValue('deposit_amount', value);
@@ -91,10 +80,8 @@ const BookingFormFields: React.FC<BookingFormFieldsProps> = ({ form }) => {
   };
 
   const handleDepositAmountChange = (value: any) => {
-    // Ensure deposit doesn't exceed total
     const total = totalAmount || 0;
     const deposit = value > total ? total : value;
-    
     setDepositAmount(deposit);
   };
 
@@ -155,7 +142,6 @@ const BookingFormFields: React.FC<BookingFormFieldsProps> = ({ form }) => {
         </div>
 
         <div className={`grid grid-cols-1 ${isMobile ? '' : 'md:grid-cols-2'} gap-4`}>
-          {/* Start Date DateTimeField */}
           <DateTimeField
             form={form}
             name="start_date"
@@ -163,12 +149,11 @@ const BookingFormFields: React.FC<BookingFormFieldsProps> = ({ form }) => {
             required={true}
           />
           
-          {/* End Date DateTimeField (Required) */}
           <DateTimeField
             form={form}
             name="end_date"
             label="End Date & Time"
-            required={true}
+            optional={true}
           />
         </div>
 

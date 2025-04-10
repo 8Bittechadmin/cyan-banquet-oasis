@@ -27,14 +27,7 @@ export const DateTimeField: React.FC<DateTimeFieldProps> = ({
   const isMobile = useIsMobile();
   
   const handleClear = () => {
-    if (required) {
-      // If it's required, set to current date instead of clearing
-      const now = new Date();
-      const formattedDate = now.toISOString().slice(0, 16); // Format as YYYY-MM-DDTHH:MM
-      form.setValue(name, formattedDate);
-    } else {
-      form.setValue(name, '');
-    }
+    form.setValue(name, '');
   };
 
   return (

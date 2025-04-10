@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
@@ -34,7 +33,7 @@ const EditBooking = () => {
   const isMobile = useIsMobile();
   
   // Helper to format dates from database to input format
-  const formatDateForInput = (dateString: string): string => {
+  const formatDateForInput = (dateString: string | null): string => {
     if (!dateString) return '';
     // Convert to ISO string and remove seconds and milliseconds
     return new Date(dateString).toISOString().slice(0, 16);
@@ -100,7 +99,7 @@ const EditBooking = () => {
           venue_id: values.venue_id,
           client_id: values.client_id,
           start_date: values.start_date,
-          end_date: values.end_date,
+          end_date: values.end_date || null,
           guest_count: values.guest_count,
           total_amount: values.total_amount || null,
           deposit_amount: values.deposit_amount || null,

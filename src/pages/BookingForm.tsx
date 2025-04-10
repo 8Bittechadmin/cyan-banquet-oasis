@@ -45,7 +45,7 @@ const BookingForm = () => {
       venue_id: '',
       client_id: '',
       start_date: startDateParam || getDefaultDate(),
-      end_date: getDefaultDate(3), // Default end date 3 hours after current time
+      end_date: getDefaultDate(3), // Default end date 3 hours after current time (can be removed by user)
       guest_count: 1,
       deposit_paid: false,
       status: 'pending',
@@ -62,7 +62,7 @@ const BookingForm = () => {
           venue_id: values.venue_id,
           client_id: values.client_id,
           start_date: values.start_date,
-          end_date: values.end_date,
+          end_date: values.end_date || null, // Handle empty end_date properly
           guest_count: values.guest_count,
           total_amount: values.total_amount || null,
           deposit_amount: values.deposit_amount || null,
